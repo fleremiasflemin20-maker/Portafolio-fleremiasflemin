@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { estadoInicial, muestrear } from '../lib/recorrido'
 import { scroll } from '../lib/scroll-state'
+import { manos } from '../lib/manos'
 
 /** Constante de amortiguación. Más alto, más pegada al scroll. */
 const LAMBDA = 4.2
@@ -22,6 +23,9 @@ export function CamaraRig() {
   const actual = useRef(estadoInicial())
   const mira = useRef(new THREE.Vector3())
   const asentada = useRef(false)
+  /* El zoom de la mano se amortigua aparte y más despacio que el resto: la
+     pinza de los dedos tiembla, y sin este filtro el temblor se ve entero. */
+  const zoom = useRef(1)
 
   useFrame((_, dt) => {
     const t = muestrear(scroll.progreso, objetivo.current)
@@ -31,10 +35,20 @@ export function CamaraRig() {
       c[k] = THREE.MathUtils.damp(c[k], t[k], LAMBDA, dt)
     }
 
+    /*
+     * El zoom de la mano multiplica el radio en vez de sustituirlo.
+     *
+     * Así el recorrido sigue mandando el encuadre —los planos generales siguen
+     * siendo generales y los primeros planos, primeros— y la mano solo lo
+     * acerca o lo aleja sobre lo que toque en ese punto de la película.
+     */
+    zoom.current = THREE.MathUtils.damp(zoom.current, manos.zoom, 3, dt)
+    const radio = c.radio * zoom.current
+
     // Esféricas → cartesianas. Con phi medido desde el polo norte.
-    const x = c.radio * Math.sin(c.phi) * Math.sin(c.theta)
-    const y = c.radio * Math.cos(c.phi) + c.miraY
-    const z = c.radio * Math.sin(c.phi) * Math.cos(c.theta)
+    const x = radio * Math.sin(c.phi) * Math.sin(c.theta)
+    const y = radio * Math.cos(c.phi) + c.miraY
+    const z = radio * Math.sin(c.phi) * Math.cos(c.theta)
 
     /*
      * El desvío lateral se aplica en metros, no en píxeles.
@@ -46,7 +60,7 @@ export function CamaraRig() {
      * tamaño, que es lo que hace que el texto y la figura nunca se pisen.
      */
     const aspecto = tamano.width / Math.max(1, tamano.height)
-    const mitad = Math.tan((c.fov * Math.PI) / 360) * c.radio * aspecto
+    const mitad = Math.tan((c.fov * Math.PI) / 360) * radio * aspecto
 
     /*
      * En pantallas estrechas el desvío se recorta.

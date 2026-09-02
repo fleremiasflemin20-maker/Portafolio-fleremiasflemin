@@ -14,6 +14,7 @@ import { Golpes } from './components/Golpes'
 import { TituloVivo } from './components/TituloVivo'
 import { Modelos } from './components/Modelos'
 import { PanelRetro } from './components/PanelRetro'
+import { ControlManos } from './components/ControlManos'
 
 export default function App() {
   const relato = useRef<HTMLDivElement>(null)
@@ -102,6 +103,9 @@ export default function App() {
   return (
     <>
       <Cinematica />
+      {/* Mismo salto de faceta que las flechas del teclado: un solo camino para
+          cambiar de personaje, venga de donde venga la orden. */}
+      <ControlManos onFaceta={(paso) => setActiva((i) => (i + paso + FACETAS.length) % FACETAS.length)} />
       <Escena faceta={f} />
       <Golpes />
 
