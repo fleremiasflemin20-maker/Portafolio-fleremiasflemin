@@ -9,6 +9,9 @@ const LETRA = 42
 /** Lo que se sostiene la pantalla una vez escrita y con todo cargado. */
 const SOSTIENE = 900
 
+/** El nombre artístico, partido para animarlo letra a letra. */
+const NOMBRE = 'FLEREMIASFLEMIN'
+
 const VIDEO = `${(import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')}/video/intro.mp4`
 
 /**
@@ -137,6 +140,43 @@ export function Cinematica() {
         playsInline
         aria-hidden="true"
       />
+
+      {/*
+        El nombre artístico, en el hueco que deja el vídeo.
+
+        Entra letra a letra con retardo escalonado en CSS y no con GSAP: aquí no
+        hay nada que sincronizar con el scroll ni con la carga, y un `animation-delay`
+        por letra no depende del ciclo de render — que es justo lo que hizo que
+        el rótulo de abajo tardara diez segundos en el primer intento.
+
+        Cabe de sobra en los cinco segundos del vídeo: la última letra entra
+        antes del segundo y medio.
+      */}
+      <div className="absolute inset-y-0 left-6 z-10 flex flex-col justify-center md:left-12 lg:left-20">
+        <h1
+          className="rotulo font-display uppercase leading-[0.82]"
+          style={{ fontSize: 'clamp(2.4rem, 7vw, 6.5rem)' }}
+          aria-label="Fleremiasflemin"
+        >
+          {NOMBRE.split('').map((ch, i) => (
+            <span
+              key={i}
+              aria-hidden="true"
+              className="letra-intro inline-block"
+              style={{ animationDelay: `${400 + i * 55}ms` }}
+            >
+              {ch}
+            </span>
+          ))}
+        </h1>
+
+        <p
+          className="letra-intro mt-4 max-w-md font-mono text-[0.78rem] uppercase tracking-[0.24em] md:text-sm"
+          style={{ animationDelay: `${400 + NOMBRE.length * 55 + 260}ms`, color: 'var(--tinta, #FF9A4D)' }}
+        >
+          O dime solo Flemin
+        </p>
+      </div>
 
       <div className="absolute bottom-16 left-6 z-10 md:bottom-20 md:left-12 lg:left-20">
         {LUGARES.map((texto, i) => (

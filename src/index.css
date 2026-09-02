@@ -157,3 +157,32 @@
     video { animation: none !important; opacity: 0.85 !important }
   }
 }
+
+@layer components {
+  /*
+   * Entrada del nombre de la cinemática, letra a letra.
+   *
+   * Sube desde abajo con un poco de escala y de inclinación. El `both` mantiene
+   * el estado inicial antes de que arranque su retardo: sin él, todas las
+   * letras se ven un instante antes de empezar a animarse, y el escalonado se
+   * pierde.
+   */
+  .letra-intro {
+    animation: entraLetra 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes entraLetra {
+    from {
+      opacity: 0;
+      transform: translateY(0.5em) scale(0.86) rotate(-4deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .letra-intro { animation: none }
+  }
+}

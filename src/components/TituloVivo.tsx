@@ -54,9 +54,14 @@ export type Entrada = keyof typeof ENTRADAS
  * Van bajo `aria-hidden` y el texto real viaja en el `aria-label` del `<h2>`:
  * partido en letras, un lector de pantalla deletrearía el titular.
  */
-function Letras({ texto }: { texto: string }) {
+function Letras({ texto, degradado = false }: { texto: string; degradado?: boolean }) {
+  const total = Math.max(1, texto.length - 1)
   return (
-    <span className="block">
+    // `whitespace-nowrap`: con cada letra en `inline-block`, el navegador puede
+    // romper la línea ENTRE letras, y "BONILLA" perdía la A en un renglón
+    // aparte. La palabra tiene que romperse donde diga el diseño, no donde
+    // quepa una letra suelta.
+    <span className="block whitespace-nowrap">
       {texto.split('').map((ch, i) => (
         <span
           key={`${ch}-${i}`}
@@ -64,7 +69,26 @@ function Letras({ texto }: { texto: string }) {
           // Los espacios en un `inline-block` colapsan y las palabras se pegan.
           style={ch === ' ' ? { width: '0.26em' } : undefined}
         >
-          <span className="titulo-letra inline-block">{ch === ' ' ? ' ' : ch}</span>
+          <span
+            className="titulo-letra inline-block"
+            /*
+             * El degradado se hace letra a letra, no con `background-clip`.
+             *
+             * `background-clip: text` NO atraviesa descendientes con
+             * `transform`, y al animar letra a letra cada una es un
+             * `inline-block` transformado: el degradado del padre no las alcanza
+             * y la palabra desaparece en negro. Dando a cada letra un color
+             * sólido interpolado según su posición se ve igual —el ojo lee el
+             * degradado a lo largo de la palabra— y además se anima sin peleas.
+             */
+            style={
+              degradado
+                ? { color: `color-mix(in oklab, var(--hasta) ${Math.round((i / total) * 100)}%, var(--desde))` }
+                : undefined
+            }
+          >
+            {ch === ' ' ? ' ' : ch}
+          </span>
         </span>
       ))}
     </span>
@@ -161,24 +185,8 @@ export function TituloVivo({
             key={k}
             className="block"
             aria-hidden="true"
-            style={
-              conGradiente
-                ? {
-                    backgroundImage: 'linear-gradient(100deg, var(--desde), var(--hasta))',
-                    WebkitBackgroundClip: 'text',
-                    backgroundClip: 'text',
-                    color: 'transparent',
-                    // `drop-shadow` y no `text-shadow`: con el relleno
-                    // transparente que exige el degradado, la sombra de texto se
-                    // pinta DENTRO de las letras y la palabra desaparece.
-                    filter:
-                      'drop-shadow(0.035em 0.04em 0 #0A0A12) drop-shadow(-0.02em -0.02em 0 #0A0A12)',
-                    textShadow: 'none',
-                  }
-                : undefined
-            }
           >
-            <Letras texto={linea} />
+            <Letras texto={linea} degradado={conGradiente} />
           </span>
         )
       })}
