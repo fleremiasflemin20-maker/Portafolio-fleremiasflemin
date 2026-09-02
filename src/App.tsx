@@ -279,12 +279,12 @@ export default function App() {
             <TituloVivo
               className="max-w-2xl"
               entrada="giro"
-              lineas={['Tres oficios,', 'una sola persona']}
+              lineas={['Viviendo para', 'trascender.']}
               gradienteUltima
-              /* El mínimo baja a 1.5rem por el móvil: «una sola persona» va en
-                 una línea sin puntos de corte —las letras son spans sueltos y
-                 la línea lleva `whitespace-nowrap`—, y a 32 px pedía 354 px
-                 dentro de una caja de 276. */
+              /* El mínimo baja a 1.5rem por el móvil: cada línea va sin puntos
+                 de corte —las letras son spans sueltos y la línea lleva
+                 `whitespace-nowrap`—, así que el tamaño tiene que dejar sitio
+                 a la más larga dentro de la caja de 276 px. */
               style={{ fontSize: 'clamp(1.5rem,4.5vw,4rem)' }}
             />
 
