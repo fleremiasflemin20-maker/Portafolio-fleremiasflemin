@@ -53,3 +53,21 @@
     .rueda-anillo { transition: none !important }
   }
 }
+
+@layer components {
+  .rotulo {
+    --borde: 0.035em;
+    --tinta-borde: #0A0A12;
+    letter-spacing: -0.02em;
+    text-shadow:
+      calc(var(--borde) * -1) calc(var(--borde) * -1) 0 var(--tinta-borde),
+      var(--borde) calc(var(--borde) * -1) 0 var(--tinta-borde),
+      calc(var(--borde) * -1) var(--borde) 0 var(--tinta-borde),
+      var(--borde) var(--borde) 0 var(--tinta-borde),
+      0 calc(var(--borde) * -1.3) 0 var(--tinta-borde),
+      0 calc(var(--borde) * 1.3) 0 var(--tinta-borde),
+      calc(var(--borde) * -1.3) 0 0 var(--tinta-borde),
+      calc(var(--borde) * 1.3) 0 0 var(--tinta-borde),
+      0.07em 0.08em 0 var(--tinta-borde);
+  }
+}
