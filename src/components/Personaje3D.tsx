@@ -1,4 +1,6 @@
 import { useGLTF } from '@react-three/drei'
+import type { ThreeEvent } from '@react-three/fiber'
+import { golpear } from '../lib/golpes'
 
 const RUTA = (m: string) => `${(import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')}/models/${m}.glb`
 const DRACO = `${(import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')}/draco/`
@@ -13,7 +15,22 @@ const DRACO = `${(import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')}/draco/`
 export function Figura({ modelo }: { modelo: string }) {
   const { scene } = useGLTF(RUTA(modelo), DRACO)
   return (
-    <group>
+    <group
+      /*
+       * El clic sobre la figura, no sobre el fondo. R3F ya hace el raycast, así
+       * que basta con escucharlo aquí: si el rayo no toca la malla, este
+       * manejador no se llama y el fondo queda libre para el scroll.
+       *
+       * `stopPropagation` evita que un mismo clic dispare dos golpes al
+       * atravesar la malla por delante y por detrás.
+       */
+      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+        e.stopPropagation()
+        golpear(e.clientX, e.clientY)
+      }}
+      onPointerOver={() => (document.body.style.cursor = 'pointer')}
+      onPointerOut={() => (document.body.style.cursor = '')}
+    >
       {/* `clone` en cada cambio: sin él los dos personajes compartirían el
           mismo objeto de escena y el segundo heredaría la transformación del
           primero. */}

@@ -118,3 +118,29 @@
     .cursor-intro { animation: none }
   }
 }
+
+@layer components {
+  /*
+   * Onomatopeya de cómic: relleno claro y contorno negro grueso.
+   *
+   * El contorno se hace con ocho sombras en anillo y no con
+   * `-webkit-text-stroke`, porque el trazo se pinta centrado sobre el relleno y
+   * adelgaza la letra; el anillo crece hacia fuera y engorda la silueta, que es
+   * lo que hace una rotulación de viñeta.
+   */
+  .golpe {
+    font-family: 'Archivo Black', Impact, sans-serif;
+    color: #FFE45C;
+    letter-spacing: 0.01em;
+    text-shadow:
+      -0.05em -0.05em 0 #0A0A12,
+      0.05em -0.05em 0 #0A0A12,
+      -0.05em 0.05em 0 #0A0A12,
+      0.05em 0.05em 0 #0A0A12,
+      0 -0.065em 0 #0A0A12,
+      0 0.065em 0 #0A0A12,
+      -0.065em 0 0 #0A0A12,
+      0.065em 0 0 #0A0A12,
+      0.1em 0.11em 0 rgba(10, 10, 18, 0.85);
+  }
+}

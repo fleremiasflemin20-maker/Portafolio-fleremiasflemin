@@ -10,6 +10,7 @@ import { Grano } from './components/Atmosfera'
 import { Expediente } from './components/Expediente'
 import { Cinematica } from './components/Cinematica'
 import { Boton } from './components/Boton'
+import { Golpes } from './components/Golpes'
 
 export default function App() {
   const relato = useRef<HTMLDivElement>(null)
@@ -78,6 +79,7 @@ export default function App() {
     <>
       <Cinematica />
       <Escena faceta={f} />
+      <Golpes />
 
       {/* El grano va sobre la escena y bajo el relato: le quita el acabado de
           render limpio, que es lo que delata que algo está hecho por ordenador. */}
@@ -107,12 +109,31 @@ export default function App() {
         <RuedaPersonaje activa={activa} onCambio={cambiar} />
       </div>
 
-      <main className="relative z-10">
-        <div ref={relato}>
+      {/*
+        El relato entero no recibe clics; se los devuelven solo los bloques que
+        los necesitan. Es el único reparto que deja el lienzo accesible: main,
+        el envoltorio de capítulos y las secciones cubren la pantalla completa,
+        y cualquiera de los tres que quede "auto" se traga el clic antes de que
+        llegue a la figura.
+      */}
+      <main className="pointer-events-none relative z-10">
+        {/* El envoltorio de los capítulos tampoco puede recibir clics: cubre la
+            pantalla entera y se los quitaba al lienzo igual que las secciones.
+            Solo el bloque de texto los recupera. */}
+        <div ref={relato} className="pointer-events-none">
         {CAPITULOS.map((c, i) => (
           <section
             key={i}
-            className={`capitulo relative flex min-h-[100svh] flex-col justify-end px-6 pb-40 md:justify-center md:pb-28 md:px-12 lg:px-20 ${
+            /*
+              `pointer-events-none` en la sección y `auto` en el texto.
+
+              Las secciones ocupan la pantalla entera por encima del lienzo, así
+              que se tragaban todos los clics: pulsar sobre la figura no llegaba
+              nunca al 3D. Comprobado con `elementFromPoint` — devolvía SECTION,
+              no el canvas. Devolviéndoselos al bloque de texto, los enlaces
+              siguen funcionando y el resto de la pantalla es del personaje.
+            */
+            className={`capitulo pointer-events-none relative flex min-h-[100svh] flex-col justify-end px-6 pb-40 md:justify-center md:pb-28 md:px-12 lg:px-20 ${
               c.lado === 'der' ? 'md:items-end' : ''
             }`}
           >
@@ -124,7 +145,7 @@ export default function App() {
               }`}
             />
 
-            <div className={`copia w-full max-w-xl ${c.lado === 'der' ? 'md:text-right' : ''}`}>
+            <div className={`copia pointer-events-auto w-full max-w-xl ${c.lado === 'der' ? 'md:text-right' : ''}`}>
               <p className="font-mono text-caption uppercase" style={{ color: 'var(--tinta)' }}>
                 {c.anio ? `${c.anio} · ` : ''}{c.rotulo}
               </p>
@@ -183,9 +204,11 @@ export default function App() {
         ))}
         </div>
 
-        <Expediente faceta={f} />
+        <div className="pointer-events-auto">
+          <Expediente faceta={f} />
+        </div>
 
-        <section className="relative px-6 pb-32 pt-8 md:px-12 lg:px-20">
+        <section className="pointer-events-auto relative px-6 pb-32 pt-8 md:px-12 lg:px-20">
           <div className="mx-auto max-w-7xl border-t border-paper/10 pt-14">
             <h2 className="max-w-2xl font-display text-headline uppercase leading-[0.95]">
               Tres oficios,
