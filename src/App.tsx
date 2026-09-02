@@ -12,6 +12,7 @@ import { Cinematica } from './components/Cinematica'
 import { Boton } from './components/Boton'
 import { Golpes } from './components/Golpes'
 import { TituloVivo } from './components/TituloVivo'
+import { Modelos } from './components/Modelos'
 
 export default function App() {
   const relato = useRef<HTMLDivElement>(null)
@@ -175,6 +176,12 @@ export default function App() {
                   </Boton>
                 </div>
               )}
+
+              {i === 0 && (
+                <div className="mt-12 border-t border-paper/10 pt-8">
+                  <Modelos compacto />
+                </div>
+              )}
             </div>
           </section>
         ))}
@@ -185,7 +192,14 @@ export default function App() {
         </div>
 
         <section className="pointer-events-auto relative px-6 pb-32 pt-8 md:px-12 lg:px-20">
-          <div className="mx-auto max-w-7xl border-t border-paper/10 pt-14">
+          {/*
+            Panel con fondo, como las tarjetas del expediente.
+
+            El cierre es la única sección sin velo, y aquí el texto es largo:
+            caía sobre la figura y sobre la parte más encendida de la ciudad. El
+            desenfoque de fondo lo separa sin apagar la escena.
+          */}
+          <div className="mx-auto max-w-7xl border border-paper/10 bg-ink/60 p-8 backdrop-blur-md md:p-12">
             <TituloVivo
               className="max-w-2xl"
               entrada="giro"
@@ -194,7 +208,11 @@ export default function App() {
               style={{ fontSize: 'clamp(2rem,4.5vw,4rem)' }}
             />
 
-            <dl className="mt-8 grid gap-x-10 gap-y-4 font-mono text-[0.72rem] sm:grid-cols-2">
+            <div className="mt-12 border-t border-paper/10 pt-10">
+              <Modelos />
+            </div>
+
+            <dl className="mt-12 grid gap-x-10 gap-y-4 font-mono text-[0.72rem] sm:grid-cols-2">
               {[
                 ['Correo', 'fleremias@outlook.com', 'mailto:fleremias@outlook.com'],
                 ['Teléfono', '+593 979 523 040', 'tel:+593979523040'],
