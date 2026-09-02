@@ -1,5 +1,6 @@
 import { PROYECTOS } from '../lib/proyectos'
 import type { Faceta } from '../lib/facetas'
+import { Habilidades } from './Habilidades'
 
 /**
  * El expediente: los proyectos de la faceta elegida.
@@ -31,6 +32,12 @@ export function Expediente({ faceta }: { faceta: Faceta }) {
           {lista.length} {lista.length === 1 ? 'pieza' : 'piezas'}
         </p>
       </header>
+
+      {/* Las barras van antes de la rejilla: primero quién es este personaje,
+          después lo que ha hecho. */}
+      <div className="mt-12">
+        <Habilidades faceta={faceta} />
+      </div>
 
       {/*
         `key` en la faceta: al cambiarla, React remonta la rejilla entera y la

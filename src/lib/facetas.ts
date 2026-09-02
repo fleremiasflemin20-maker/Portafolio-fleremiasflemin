@@ -29,6 +29,13 @@ export type Faceta = {
   tinta: string
   /** Tres cifras. Más se lee como informe, menos no dice nada. */
   stats: { etiqueta: string; valor: string }[]
+  /**
+   * Barras de habilidad, con los porcentajes del apartado STACK TECNOLÓGICO
+   * del CV. Ni uno inventado: los diez que hay están repartidos por dominio, y
+   * por eso Hotelería tiene menos — el CV solo lista dos competencias
+   * hoteleras con porcentaje.
+   */
+  habilidades: { nombre: string; nivel: number }[]
 }
 
 export const FACETAS: Faceta[] = [
@@ -48,6 +55,13 @@ export const FACETAS: Faceta[] = [
       { etiqueta: 'Nube', valor: 'AWS · microservicios' },
       { etiqueta: 'IA', valor: 'LLM · agentes' },
     ],
+    habilidades: [
+      { nombre: 'HTML / CSS / DOM', nivel: 90 },
+      { nombre: 'Python', nivel: 88 },
+      { nombre: 'JavaScript / Node.js', nivel: 85 },
+      { nombre: 'React / Angular', nivel: 82 },
+      { nombre: 'AWS / Cloud', nivel: 78 },
+    ],
   },
   {
     id: 'producto',
@@ -65,6 +79,12 @@ export const FACETAS: Faceta[] = [
       { etiqueta: 'Front desk', valor: '−70% tiempo' },
       { etiqueta: 'Consultas IA', valor: '80% resueltas' },
     ],
+    habilidades: [
+      { nombre: 'Hotel Tech Software', nivel: 95 },
+      { nombre: 'IA / LLMs / Agentes', nivel: 87 },
+      { nombre: 'Arquitectura SaaS', nivel: 85 },
+      { nombre: 'SQL / Bases de datos', nivel: 84 },
+    ],
   },
   {
     id: 'hoteleria',
@@ -81,6 +101,10 @@ export const FACETAS: Faceta[] = [
       { etiqueta: 'Ascenso', valor: 'Houseman → Manager' },
       { etiqueta: 'En', valor: '2,5 años' },
       { etiqueta: 'Turnover', valor: '+30%' },
+    ],
+    habilidades: [
+      { nombre: 'Gestión hotelera', nivel: 96 },
+      { nombre: 'Hotel Tech Software', nivel: 95 },
     ],
   },
 ]
