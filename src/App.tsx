@@ -11,6 +11,7 @@ import { Expediente } from './components/Expediente'
 import { Cinematica } from './components/Cinematica'
 import { Boton } from './components/Boton'
 import { Golpes } from './components/Golpes'
+import { TituloVivo } from './components/TituloVivo'
 
 export default function App() {
   const relato = useRef<HTMLDivElement>(null)
@@ -153,38 +154,13 @@ export default function App() {
                 {c.lugar}
               </p>
 
-              <h2 className="rotulo mt-5 font-display uppercase leading-[0.85]" style={{ fontSize: i === 0 ? 'clamp(3.2rem,9vw,8rem)' : 'clamp(2.2rem,6vw,5rem)' }}>
-                {c.titulo.map((linea, k) => (
-                  <span key={k} className="block">
-                    {k === c.titulo.length - 1 && i === 0 ? (
-                      <span
-                        style={{
-                          backgroundImage: 'linear-gradient(100deg, var(--desde), var(--hasta))',
-                          WebkitBackgroundClip: 'text',
-                          backgroundClip: 'text',
-                          color: 'transparent',
-                          /*
-                           * `drop-shadow`, no `text-shadow`.
-                           *
-                           * Con el relleno transparente que exige el degradado,
-                           * la sombra de texto se pinta DENTRO de las letras y
-                           * la palabra desaparece en negro. `drop-shadow` actúa
-                           * sobre el resultado ya compuesto, así que rodea el
-                           * degradado en vez de taparlo.
-                           */
-                          filter:
-                            'drop-shadow(0.035em 0.04em 0 #0A0A12) drop-shadow(-0.02em -0.02em 0 #0A0A12) drop-shadow(0.06em 0.07em 0 #0A0A1288)',
-                          textShadow: 'none',
-                        }}
-                      >
-                        {linea}
-                      </span>
-                    ) : (
-                      linea
-                    )}
-                  </span>
-                ))}
-              </h2>
+              <TituloVivo
+                className="mt-5"
+                entrada={c.entrada}
+                lineas={c.titulo}
+                gradienteUltima={i === 0}
+                style={{ fontSize: i === 0 ? 'clamp(3.2rem,9vw,8rem)' : 'clamp(2.2rem,6vw,5rem)' }}
+              />
 
               <p className="mt-6 text-body text-paper/75">{c.texto}</p>
 
@@ -210,20 +186,13 @@ export default function App() {
 
         <section className="pointer-events-auto relative px-6 pb-32 pt-8 md:px-12 lg:px-20">
           <div className="mx-auto max-w-7xl border-t border-paper/10 pt-14">
-            <h2 className="max-w-2xl font-display text-headline uppercase leading-[0.95]">
-              Tres oficios,
-              <br />
-              <span
-                style={{
-                  backgroundImage: 'linear-gradient(100deg, var(--desde), var(--hasta))',
-                  WebkitBackgroundClip: 'text',
-                  backgroundClip: 'text',
-                  color: 'transparent',
-                }}
-              >
-                una sola persona
-              </span>
-            </h2>
+            <TituloVivo
+              className="max-w-2xl"
+              entrada="giro"
+              lineas={['Tres oficios,', 'una sola persona']}
+              gradienteUltima
+              style={{ fontSize: 'clamp(2rem,4.5vw,4rem)' }}
+            />
 
             <dl className="mt-8 grid gap-x-10 gap-y-4 font-mono text-[0.72rem] sm:grid-cols-2">
               {[

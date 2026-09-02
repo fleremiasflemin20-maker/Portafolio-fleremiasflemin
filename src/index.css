@@ -144,3 +144,16 @@
       0.1em 0.11em 0 rgba(10, 10, 18, 0.85);
   }
 }
+
+@layer components {
+  /* El vídeo de la intro no aparece de golpe: entra deslizándose desde el
+     borde, o el primer fotograma se planta en pantalla como un cartel. */
+  @keyframes entraVideo {
+    from { opacity: 0; transform: translateX(6%) scale(1.04) }
+    to   { opacity: 0.85; transform: none }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    video { animation: none !important; opacity: 0.85 !important }
+  }
+}

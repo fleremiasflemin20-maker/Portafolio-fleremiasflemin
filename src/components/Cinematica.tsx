@@ -7,7 +7,9 @@ const LUGARES = ['QUITO, ECUADOR', 'SANTA MONICA, CALIFORNIA']
 /** Milisegundos por letra. 42 se lee como una máquina, no como una animación. */
 const LETRA = 42
 /** Lo que se sostiene la pantalla una vez escrita y con todo cargado. */
-const SOSTIENE = 700
+const SOSTIENE = 900
+
+const VIDEO = `${(import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')}/video/intro.mp4`
 
 /**
  * La cinemática de entrada.
@@ -86,11 +88,57 @@ export function Cinematica() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-0 z-[60] bg-[#0A0A12] transition-opacity duration-[900ms] ease-out"
-      style={{ opacity: fuera ? 0 : 1, visibility: fuera ? 'hidden' : 'visible' }}
+      /*
+       * Salida suave, no un corte.
+       *
+       * Solo con opacidad el paso se sentía tosco: el negro se iba de golpe y
+       * la escena aparecía ya montada. Añadiendo un empujón de escala y un
+       * desenfoque, el telón parece abrirse hacia el espectador y la escena
+       * entra desde detrás. Es la misma diferencia que entre cortar un plano y
+       * fundirlo.
+       *
+       * 1400 ms y `cubic-bezier(0.16, 1, 0.3, 1)`: arranca deprisa y frena
+       * mucho al final, que es lo que hace que no se note dónde termina.
+       */
+      className="pointer-events-none fixed inset-0 z-[60] bg-[#0A0A12]"
+      style={{
+        opacity: fuera ? 0 : 1,
+        visibility: fuera ? 'hidden' : 'visible',
+        transform: fuera ? 'scale(1.08)' : 'scale(1)',
+        filter: fuera ? 'blur(14px)' : 'blur(0px)',
+        transition:
+          'opacity 1400ms cubic-bezier(0.16, 1, 0.3, 1), transform 1400ms cubic-bezier(0.16, 1, 0.3, 1), filter 1100ms ease-out, visibility 0s linear 1400ms',
+      }}
       aria-hidden={fuera}
     >
-      <div className="absolute bottom-16 left-6 md:bottom-20 md:left-12 lg:left-20">
+      {/*
+        El vídeo a un lado, mientras carga.
+        
+        Da algo que mirar durante los segundos que tardan el modelo y las
+        texturas, que es el problema real de una pantalla de carga: no que dure,
+        sino que no ofrezca nada. Va mudo porque la reproducción automática lo
+        exige y porque una web que suena sola molesta.
+
+        `playsInline` es obligatorio en iOS: sin él, Safari lo saca a pantalla
+        completa en cuanto empieza y se lleva por delante toda la puesta en
+        escena.
+      */}
+      <video
+        className="pointer-events-none absolute right-0 top-0 h-full w-1/2 object-cover opacity-0 md:w-[38%]"
+        style={{
+          animation: 'entraVideo 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards',
+          WebkitMaskImage: 'linear-gradient(to left, #000 55%, transparent 100%)',
+          maskImage: 'linear-gradient(to left, #000 55%, transparent 100%)',
+        }}
+        src={VIDEO}
+        autoPlay
+        muted
+        loop
+        playsInline
+        aria-hidden="true"
+      />
+
+      <div className="absolute bottom-16 left-6 z-10 md:bottom-20 md:left-12 lg:left-20">
         {LUGARES.map((texto, i) => (
           <p
             key={texto}

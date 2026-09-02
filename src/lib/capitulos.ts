@@ -18,6 +18,8 @@ export type Capitulo = {
   texto: string
   /** A qué lado va el texto. La cámara desvía la figura al lado contrario. */
   lado: 'izq' | 'der'
+  /** Entrada del titular. Distinta en cada capítulo, a propósito. */
+  entrada: 'caida' | 'barrido' | 'impacto' | 'giro'
 }
 
 export const CAPITULOS: Capitulo[] = [
@@ -29,6 +31,7 @@ export const CAPITULOS: Capitulo[] = [
     texto:
       'Ingeniero en Administración de Empresas Hoteleras por la UDLA e ingeniero de software por Santa Monica Academy. Construyo la tecnología que los hoteles necesitan de verdad, diseñada por alguien que vivió la operación desde dentro.',
     lado: 'izq',
+    entrada: 'caida',
   },
   {
     anio: '2019',
@@ -38,6 +41,7 @@ export const CAPITULOS: Capitulo[] = [
     texto:
       'Houseman en un hotel de lujo de Santa Monica. Limpieza, mantenimiento y servicio al huésped. Nada de esto sale en un currículum de programador, y es exactamente lo que hoy me diferencia.',
     lado: 'der',
+    entrada: 'barrido',
   },
   {
     anio: '2021',
@@ -47,6 +51,7 @@ export const CAPITULOS: Capitulo[] = [
     texto:
       'Polifuncional: recepción, room service, mantenimiento y housekeeping. Esa visión transversal fue la que después me dejó diseñar software que conecta departamentos en vez de aislarlos.',
     lado: 'izq',
+    entrada: 'impacto',
   },
   {
     anio: '2022',
@@ -56,6 +61,7 @@ export const CAPITULOS: Capitulo[] = [
     texto:
       'De Houseman a Manager en dos años y medio. Equipos bajo estándar premium, 30% mejor turnover de habitaciones y menos errores entre housekeeping y recepción. Cada fricción que anoté ahí acabó siendo una función.',
     lado: 'der',
+    entrada: 'giro',
   },
   {
     anio: '2024',
@@ -65,6 +71,7 @@ export const CAPITULOS: Capitulo[] = [
     texto:
       'Fleremahias PMS: ocho módulos, facturación electrónica al SRI con XML firmado, modo sin internet y un agente de IA que resuelve el 80% de las consultas de recepción en menos de dos segundos.',
     lado: 'izq',
+    entrada: 'barrido',
   },
   {
     anio: 'Hoy',
@@ -74,5 +81,6 @@ export const CAPITULOS: Capitulo[] = [
     texto:
       'Soy el puente entre el equipo operativo y el de tecnología. Habiendo vivido el hotel desde la base hasta la gerencia, construyo herramientas que el personal realmente adopta — que es donde fracasa casi todo el software hotelero.',
     lado: 'der',
+    entrada: 'impacto',
   },
 ]
