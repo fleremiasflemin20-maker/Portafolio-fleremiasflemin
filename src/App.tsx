@@ -8,6 +8,7 @@ import { Escena } from './components/Escena'
 import { RuedaPersonaje } from './components/RuedaPersonaje'
 import { Grano } from './components/Atmosfera'
 import { Expediente } from './components/Expediente'
+import { Galeria } from './components/Galeria'
 import { Cinematica } from './components/Cinematica'
 import { Boton } from './components/Boton'
 import { Golpes } from './components/Golpes'
@@ -257,6 +258,13 @@ export default function App() {
 
         <div className="pointer-events-auto">
           <Expediente faceta={f} />
+        </div>
+
+        {/* La vista de conjunto, con foto de cada pieza. Va aquí a propósito:
+            después del expediente por faceta y antes del cierre, para que la
+            despedida y los datos de contacto sigan siendo lo último. */}
+        <div className="pointer-events-auto">
+          <Galeria />
         </div>
 
         <section className="pointer-events-auto relative px-6 pb-32 pt-8 md:px-12 lg:px-20">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 
 /** Las dos localizaciones, en el orden en que ocurrieron. */
@@ -25,15 +25,22 @@ const VIDEO = `${(import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')}/video/int
  * aparecía de golpe. Esta pantalla ocupa exactamente ese hueco, así que la
  * espera deja de ser un salto y pasa a ser la intro.
  *
- * La condición de salida son las dos cosas a la vez: que el texto haya
- * terminado de escribirse **y** que las descargas hayan acabado. Si saliera
- * solo con el texto, en una conexión lenta volvería el salto; si saliera solo
- * con la carga, en una rápida ni se leería el rótulo.
+ * La condición para llegar a "listo" son las dos cosas a la vez: que el texto
+ * haya terminado de escribirse **y** que las descargas hayan acabado. Si
+ * llegara solo con el texto, en una conexión lenta volvería el salto; si
+ * llegara solo con la carga, en una rápida ni se leería el rótulo.
+ *
+ * De "listo" no se sale solo. Antes lo hacía —un `setTimeout` de 900 ms y
+ * fuera—, pero eso convertía la pantalla en un trámite: nadie llega a leer
+ * "Quito, Ecuador · Santa Monica, California" en menos de un segundo. Ahora
+ * hace falta un toque, como el "PRESS START" de un cartucho. Es la misma
+ * pantalla resuelta como arranque de videojuego en vez de como cortina.
  */
 export function Cinematica() {
   const { progress } = useProgress()
   const [escrito, setEscrito] = useState('')
   const [terminado, setTerminado] = useState(false)
+  const [listo, setListo] = useState(false)
   const [fuera, setFuera] = useState(false)
   const [desmontado, setDesmontado] = useState(false)
 
@@ -61,25 +68,45 @@ export function Cinematica() {
   }, [])
 
   /*
-   * Salida. Dos condiciones y un tope.
+   * "Listo". Dos condiciones y un tope.
    *
    * `progress` sin `active`: el `active` de drei se queda en true aunque la
    * descarga haya acabado —medido: el porcentaje marcaba 100 y el telón no se
    * levantaba nunca—, así que fiarse de él deja al visitante en una pantalla
    * negra para siempre.
    *
-   * Y un tope de seguridad: si algo falla al cargar, el telón se levanta igual.
-   * Es preferible una escena a medio poner que un negro eterno.
+   * Y un tope de seguridad: si algo falla al cargar, se ofrece el botón igual.
+   * Es preferible dejar pasar con una descarga a medias que un negro eterno.
    */
   useEffect(() => {
-    if (fuera) return
+    if (listo) return
     if (terminado && progress >= 100) {
-      const t = setTimeout(() => setFuera(true), SOSTIENE)
+      const t = setTimeout(() => setListo(true), SOSTIENE)
       return () => clearTimeout(t)
     }
-    const tope = setTimeout(() => setFuera(true), 9000)
+    const tope = setTimeout(() => setListo(true), 9000)
     return () => clearTimeout(tope)
-  }, [terminado, progress, fuera])
+  }, [terminado, progress, listo])
+
+  /* La salida de verdad. Antes se disparaba sola; ahora la pide un toque —
+     clic, Enter o espacio— para que la pantalla deje de ser un trámite y pase
+     a ser el "PRESS START" de la intro. */
+  const continuar = useCallback(() => {
+    if (!listo || fuera) return
+    setFuera(true)
+  }, [listo, fuera])
+
+  useEffect(() => {
+    if (!listo) return
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault()
+        continuar()
+      }
+    }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [listo, continuar])
 
   useEffect(() => {
     const raiz = document.documentElement
@@ -121,7 +148,7 @@ export function Cinematica() {
        * 1400 ms y `cubic-bezier(0.16, 1, 0.3, 1)`: arranca deprisa y frena
        * mucho al final, que es lo que hace que no se note dónde termina.
        */
-      className="pointer-events-none fixed inset-0 z-[60] bg-[#0A0A12]"
+      className={`fixed inset-0 z-[60] bg-[#0A0A12] ${listo ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`}
       style={{
         opacity: fuera ? 0 : 1,
         visibility: fuera ? 'hidden' : 'visible',
@@ -131,6 +158,12 @@ export function Cinematica() {
           'opacity 1400ms cubic-bezier(0.16, 1, 0.3, 1), transform 1400ms cubic-bezier(0.16, 1, 0.3, 1), filter 1100ms ease-out, visibility 0s linear 1400ms',
       }}
       aria-hidden={fuera}
+      /* Toda la pantalla vale como botón una vez lista: reduce a cero la
+         puntería que hace falta para pasar, el "botón" en sí es solo el
+         foco visual de dónde tocar. */
+      onClick={continuar}
+      role={listo ? 'button' : undefined}
+      tabIndex={listo ? 0 : undefined}
     >
       {/*
         El vídeo a un lado, mientras carga.
@@ -211,10 +244,46 @@ export function Cinematica() {
       </div>
 
       {/* El porcentaje, discreto y abajo a la derecha. No es un adorno: en una
-          conexión lenta es lo único que dice que la página no se ha colgado. */}
-      <p className="absolute bottom-16 right-6 font-mono text-[0.7rem] tracking-[0.2em] text-paper/30 md:bottom-20 md:right-12 lg:right-20">
-        {Math.round(progress)}%
-      </p>
+          conexión lenta es lo único que dice que la página no se ha colgado.
+          Se apaga en cuanto hay botón que pulsar — a partir de ahí ya no
+          informa de nada que el propio botón no diga. */}
+      {!listo && (
+        <p className="absolute bottom-16 right-6 font-mono text-[0.7rem] tracking-[0.2em] text-paper/30 md:bottom-20 md:right-12 lg:right-20">
+          {Math.round(progress)}%
+        </p>
+      )}
+
+      {/*
+        El "PRESS START" de la intro.
+
+        En GTA la pantalla de carga no suelta al jugador sola: pide un toque
+        antes de entrar al mundo. Aquí cumple el mismo papel y resuelve algo
+        real — sin él, nadie llegaba a leer "Quito, Ecuador" ni se enteraba de
+        que existe un control por gestos de mano, porque la pantalla se
+        cerraba sola en menos de un segundo.
+
+        Centrado y no pegado a una esquina: es lo único de la pantalla que
+        pide una acción, así que tiene que ganar el pulso visual al nombre y
+        al vídeo, no competir con ellos desde un rincón.
+      */}
+      {listo && (
+        <div className="entra pointer-events-none absolute inset-x-0 bottom-28 z-20 flex flex-col items-center gap-5 px-6 text-center md:bottom-32">
+          <button
+            type="button"
+            onClick={continuar}
+            className="boton-continuar pointer-events-auto border-2 bg-ink/70 px-10 py-4 font-display text-xl uppercase tracking-[0.08em] backdrop-blur-sm md:text-2xl"
+            style={{ borderColor: 'var(--tinta, #FF9A4D)', color: 'var(--tinta, #FF9A4D)' }}
+          >
+            Presiona para continuar
+          </button>
+
+          <p className="max-w-md font-mono text-[0.62rem] uppercase leading-relaxed tracking-[0.14em] text-paper/50 md:text-[0.68rem]">
+            Desplázate con el scroll para recorrer la historia.
+            <br className="hidden md:block" /> O activa <span className="text-paper/75">«Manejar con las manos»</span>{' '}
+            —abajo a la izquierda— y navega moviendo la palma frente a tu cámara.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

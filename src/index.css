@@ -160,6 +160,35 @@
 
 @layer components {
   /*
+   * El pulso del botón "Presiona para continuar".
+   *
+   * Sin él, el botón es un rectángulo más en una pantalla con vídeo y letras
+   * animándose: se pierde. El pulso —escala y un resplandor que respira en el
+   * color de la faceta— es lo que hace que el ojo lo encuentre sin tener que
+   * leer la pantalla entera primero.
+   */
+  .boton-continuar {
+    animation: pulsoContinuar 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulsoContinuar {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--tinta, #FF9A4D) 45%, transparent);
+    }
+    50% {
+      transform: scale(1.045);
+      box-shadow: 0 0 0 10px color-mix(in srgb, var(--tinta, #FF9A4D) 0%, transparent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .boton-continuar { animation: none }
+  }
+}
+
+@layer components {
+  /*
    * Entrada del nombre de la cinemática, letra a letra.
    *
    * Sube desde abajo con un poco de escala y de inclinación. El `both` mantiene
