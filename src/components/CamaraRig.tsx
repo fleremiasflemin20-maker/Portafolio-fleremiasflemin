@@ -47,7 +47,24 @@ export function CamaraRig() {
      */
     const aspecto = tamano.width / Math.max(1, tamano.height)
     const mitad = Math.tan((c.fov * Math.PI) / 360) * c.radio * aspecto
-    const corrimiento = c.desvio * mitad
+
+    /*
+     * En pantallas estrechas el desvío se recorta.
+     *
+     * El texto ocupa el ancho completo en vertical, así que ahí no hay "un
+     * lado" al que apartar la figura: empujarla lo mismo que en escritorio la
+     * sacaría de cuadro. La escala baja con la proporción y no llega a cero,
+     * para que siempre quede algo de descentrado.
+     */
+    const escala = THREE.MathUtils.clamp((aspecto - 0.62) / 0.95, 0.22, 1)
+
+    /*
+     * Signo NEGADO: mover la cámara a la derecha desplaza la figura a la
+     * IZQUIERDA en pantalla. Medido — con desvío +0.26 la figura acababa 261 px
+     * a la izquierda del centro, justo encima del texto. Así `desvio` positivo
+     * significa lo que dice su comentario: figura a la derecha.
+     */
+    const corrimiento = -c.desvio * mitad * escala
 
     // Perpendicular al eje de mirada, para que el desvío sea siempre lateral
     // en pantalla y no se convierta en acercamiento al girar la cámara.

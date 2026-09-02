@@ -116,13 +116,9 @@ export default function App() {
             {/* Velo de legibilidad, fijo al capítulo: sin él el cuerpo del texto
                 se pierde sobre las partes claras del atardecer. */}
             <div
-              className="pointer-events-none absolute inset-0 -z-10"
-              style={{
-                background:
-                  c.lado === 'der'
-                    ? 'linear-gradient(to left, #0A0A12E0 0%, #0A0A1288 42%, transparent 72%)'
-                    : 'linear-gradient(to right, #0A0A12E0 0%, #0A0A1288 42%, transparent 72%)',
-              }}
+              className={`velo pointer-events-none absolute inset-0 -z-10 ${
+                c.lado === 'der' ? 'velo-der' : 'velo-izq'
+              }`}
             />
 
             <div className={`copia w-full max-w-xl ${c.lado === 'der' ? 'md:text-right' : ''}`}>

@@ -71,3 +71,27 @@
       0.07em 0.08em 0 var(--tinta-borde);
   }
 }
+
+@layer components {
+  /*
+   * Velo de legibilidad.
+   *
+   * En horizontal el texto vive en un lado y la figura en el otro, así que el
+   * velo va lateral. En vertical no hay dos lados: el texto se apila abajo y la
+   * figura ocupa toda la pantalla detrás — medido, en el plano corto la figura
+   * va de -159 a 449 px sobre una pantalla de 390. Un velo lateral ahí no tapa
+   * nada y el texto acaba sobre la camiseta blanca.
+   */
+  .velo {
+    background: linear-gradient(to top, #0A0A12EE 0%, #0A0A12B3 38%, #0A0A1255 62%, transparent 88%);
+  }
+
+  @media (min-width: 768px) {
+    .velo-izq {
+      background: linear-gradient(to right, #0A0A12E6 0%, #0A0A1299 42%, transparent 72%);
+    }
+    .velo-der {
+      background: linear-gradient(to left, #0A0A12E6 0%, #0A0A1299 42%, transparent 72%);
+    }
+  }
+}

@@ -25,7 +25,15 @@ export type Fotograma = {
   /** Altura del punto al que mira. La figura mide 1.90 y pisa y=0. */
   miraY: number
   fov: number
-  /** Desplazamiento lateral en pantalla, en fracción de media anchura. */
+  /**
+   * Desplazamiento lateral de la figura en pantalla, en fracción de media
+   * anchura. Positivo la manda a la derecha, negativo a la izquierda — siempre
+   * al lado CONTRARIO del texto de ese capítulo.
+   *
+   * Los valores salieron de medir el solape real a 1920 px, no de estimarlo:
+   * con los primeros, cinco de los seis capítulos tenían la figura encima del
+   * texto, hasta 355 px de solape.
+   */
   desvio: number
 }
 
@@ -35,17 +43,17 @@ const VUELTA = Math.PI * 2
 // prettier-ignore
 export const RECORRIDO: Fotograma[] = [
   // 1 · Plano general. La presentación: quién es y qué hace.
-  { at: 0.0000, theta:  0.20, phi: 1.52, radio: 4.30, miraY: 0.95, fov: 32, desvio:  0.26 },
+  { at: 0.0000, theta:  0.20, phi: 1.52, radio: 4.30, miraY: 0.95, fov: 32, desvio:  0.34 },
   // 2 · 2019 · Houseman. Se acerca, todavía de frente.
-  { at: 0.2000, theta: -0.30, phi: 1.50, radio: 3.40, miraY: 1.05, fov: 31, desvio: -0.30 },
+  { at: 0.2000, theta: -0.30, phi: 1.50, radio: 3.40, miraY: 1.05, fov: 31, desvio: -0.34 },
   // 3 · 2021 · Polifuncional. Empieza a rodear.
-  { at: 0.4000, theta: -0.20 - MEDIA * 0.45, phi: 1.46, radio: 2.70, miraY: 1.20, fov: 30, desvio:  0.32 },
+  { at: 0.4000, theta: -0.20 - MEDIA * 0.45, phi: 1.46, radio: 2.70, miraY: 1.20, fov: 30, desvio:  0.40 },
   // 4 · 2022 · Manager. Primer plano corto, casi de espaldas.
-  { at: 0.6000, theta: -0.20 - MEDIA * 0.85, phi: 1.44, radio: 2.05, miraY: 1.32, fov: 29, desvio: -0.26 },
+  { at: 0.6000, theta: -0.20 - MEDIA * 0.85, phi: 1.44, radio: 2.05, miraY: 1.32, fov: 29, desvio: -0.44 },
   // 5 · 2024 · Founder. Se abre y sube: el punto de inflexión.
-  { at: 0.8000, theta: -0.20 - MEDIA - VUELTA * 0.22, phi: 1.24, radio: 3.10, miraY: 1.22, fov: 31, desvio:  0.24 },
+  { at: 0.8000, theta: -0.20 - MEDIA - VUELTA * 0.22, phi: 1.24, radio: 3.10, miraY: 1.22, fov: 31, desvio:  0.36 },
   // 6 · Hoy. Órbita alta, y vuelve al frente: se cierra el círculo.
-  { at: 1.0000, theta: -0.20 - MEDIA - VUELTA,        phi: 1.50, radio: 4.80, miraY: 0.98, fov: 34, desvio:  0.28 },
+  { at: 1.0000, theta: -0.20 - MEDIA - VUELTA,        phi: 1.50, radio: 4.80, miraY: 0.98, fov: 34, desvio: -0.30 },
 ]
 
 /** Smootherstep de Perlin: suaviza la unión entre fotogramas sin frenar de golpe. */
