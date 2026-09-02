@@ -8,6 +8,7 @@ import { Escena } from './components/Escena'
 import { RuedaPersonaje } from './components/RuedaPersonaje'
 import { Grano } from './components/Atmosfera'
 import { Expediente } from './components/Expediente'
+import { Cinematica } from './components/Cinematica'
 
 export default function App() {
   const relato = useRef<HTMLDivElement>(null)
@@ -74,6 +75,7 @@ export default function App() {
 
   return (
     <>
+      <Cinematica />
       <Escena faceta={f} />
 
       {/* El grano va sobre la escena y bajo el relato: le quita el acabado de
