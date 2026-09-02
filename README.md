@@ -2,7 +2,7 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:7B2CFF,50:FF2D8A,100:FF7A2F&height=180&section=header&text=VICE&fontSize=54&fontColor=ffffff&animation=twinkling&desc=Portfolio%20con%20rueda%20de%20selecci%C3%B3n%20de%20personaje&descAlignY=65&descSize=16&fontAlignY=35" width="100%"/>
 
-<a href="https://fleremiasflemin20-maker.github.io/vice-portfolio/">
+<a href="https://fleremiasflemin20-maker.github.io/Portafolio-fleremiasflemin/">
   <img src="https://img.shields.io/badge/🔴_LIVE_DEMO-Abrir_el_sitio-FF2D8A?style=for-the-badge" alt="Ver sitio en vivo" />
 </a>
 
@@ -59,8 +59,8 @@ Tres cosas que costaron encontrar:
 ## Ver el código localmente
 
 ```bash
-git clone https://github.com/fleremiasflemin20-maker/vice-portfolio.git
-cd vice-portfolio
+git clone https://github.com/fleremiasflemin20-maker/Portafolio-fleremiasflemin.git
+cd Portafolio-fleremiasflemin
 npm install
 npm run dev
 ```
