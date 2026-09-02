@@ -53,7 +53,13 @@ export function Personaje3D({ faceta }: { faceta: Faceta }) {
       dpr={[1, 1.5]}
       camera={{ position: [0, 0.05, 4.1], fov: 32 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
-      style={{ background: 'transparent' }}
+      /*
+       * `pointerEvents: 'none'` en el propio lienzo, no solo en el div que lo
+       * envuelve: R3F le escribe estilos al <canvas> y anula lo que herede del
+       * padre. Sin esto el lienzo se traga los clics de la rueda —está encima y
+       * es más grande— y los sectores dejan de responder.
+       */
+      style={{ background: 'transparent', pointerEvents: 'none' }}
     >
       <Suspense fallback={null}>
         <Environment preset="sunset" />

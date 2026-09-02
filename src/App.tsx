@@ -135,7 +135,9 @@ export default function App() {
             <Personaje3D faceta={f} />
           </div>
 
-          <RuedaPersonaje activa={activa} onCambio={cambiar} />
+          <div className="relative z-10 h-full w-full">
+            <RuedaPersonaje activa={activa} onCambio={cambiar} />
+          </div>
 
           {/* Va bajo el anillo y no en su centro: ese hueco es de la cara del
               personaje. Con el rótulo encima, ni se leía el nombre ni se veía
