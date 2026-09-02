@@ -269,7 +269,11 @@ export default function App() {
               entrada="giro"
               lineas={['Tres oficios,', 'una sola persona']}
               gradienteUltima
-              style={{ fontSize: 'clamp(2rem,4.5vw,4rem)' }}
+              /* El mínimo baja a 1.5rem por el móvil: «una sola persona» va en
+                 una línea sin puntos de corte —las letras son spans sueltos y
+                 la línea lleva `whitespace-nowrap`—, y a 32 px pedía 354 px
+                 dentro de una caja de 276. */
+              style={{ fontSize: 'clamp(1.5rem,4.5vw,4rem)' }}
             />
 
             <div className="mt-12 border-t border-paper/10 pt-10">
