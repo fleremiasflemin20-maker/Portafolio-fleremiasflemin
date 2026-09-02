@@ -37,6 +37,41 @@ const HUESOS: [number, number][] = [
   [0, 17],
 ]
 
+/*
+ * El puntero por gestos, hecho de eventos de verdad.
+ *
+ * Mover un `<div>` encima de la página no basta: el navegador no sabe que hay
+ * un cursor ahí, así que ningún botón se ilumina y ningún enlace responde. Lo
+ * que sí entiende cualquier página —esta o cualquier otra, y también la
+ * escena 3D, que recoge sus propios eventos de puntero sobre el lienzo— son
+ * los eventos de puntero y ratón nativos: `pointermove`, `pointerover` /
+ * `pointerout`, `pointerdown` / `pointerup` y `click`. Se despachan con
+ * coordenadas reales sobre el elemento que hay debajo del dedo, así que para
+ * el navegador es indistinguible de un ratón físico moviéndose por ahí.
+ */
+function despacharRaton(tipo: string, el: Element, x: number, y: number, extra: MouseEventInit = {}) {
+  el.dispatchEvent(
+    new MouseEvent(tipo, { bubbles: true, cancelable: true, composed: true, view: window, clientX: x, clientY: y, button: 0, ...extra }),
+  )
+}
+
+function despacharPuntero(tipo: string, el: Element, x: number, y: number, extra: PointerEventInit = {}) {
+  el.dispatchEvent(
+    new PointerEvent(tipo, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      clientX: x,
+      clientY: y,
+      pointerId: 1,
+      pointerType: 'mouse',
+      isPrimary: true,
+      button: 0,
+      ...extra,
+    }),
+  )
+}
+
 type Estado = 'apagado' | 'arrancando' | 'activo' | 'error'
 
 export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void }) {
@@ -81,6 +116,11 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
       un clic mantenido dispara uno nuevo en cada fotograma. */
   const clicDerecha = useRef(false)
   const clicIzquierda = useRef(false)
+  /** Qué hay bajo el cursor ahora mismo, para saber cuándo disparar
+      entrada/salida — y sobre qué elemento se cerró la pinza, para que el
+      clic solo salga si se suelta en el mismo sitio donde se apretó. */
+  const hoverEl = useRef<Element | null>(null)
+  const pressEl = useRef<Element | null>(null)
 
   /** Corta la cámara de verdad: soltar la referencia deja el piloto encendido. */
   const apagar = useCallback(() => {
@@ -92,6 +132,12 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
     if (video.current) video.current.srcObject = null
     manos.zoom = 1
     if (cursorHand.current) cursorHand.current.style.display = 'none'
+    if (hoverEl.current) {
+      despacharPuntero('pointerout', hoverEl.current, -1, -1)
+      despacharRaton('mouseout', hoverEl.current, -1, -1)
+      hoverEl.current = null
+    }
+    pressEl.current = null
     setVisto({ control: false, camara: false })
     setEstado('apagado')
   }, [])
@@ -151,8 +197,10 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
   function apuntar(p: Punto[], previo: { current: boolean }) {
     const punta = puntaIndice(p)
     // Espejo, igual que el resto de la mano: la imagen no viene reflejada.
-    const x = (1 - punta.x) * window.innerWidth
-    const y = punta.y * window.innerHeight
+    // Recortado al viewport: fuera de rango `elementFromPoint` devuelve null
+    // y el cursor se queda "flotando" sin poder tocar nada.
+    const x = Math.min(window.innerWidth - 1, Math.max(0, (1 - punta.x) * window.innerWidth))
+    const y = Math.min(window.innerHeight - 1, Math.max(0, punta.y * window.innerHeight))
     const cerrado = pinza(p) < UMBRAL_CLIC
 
     const el = cursorHand.current
@@ -166,11 +214,58 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
       el.classList.toggle('cursor-mano-cerrado', cerrado)
     }
 
-    if (cerrado && !previo.current) {
-      const objetivo = document.elementFromPoint(x, y)
-      if (objetivo instanceof HTMLElement) objetivo.click()
+    // El propio cursor tapa lo que hay debajo: sin `pointer-events-none`
+    // `elementFromPoint` se encontraría a sí mismo en vez del botón real.
+    const objetivo = document.elementFromPoint(x, y)
+
+    /*
+     * Entrar y salir de un elemento.
+     *
+     * Algunos componentes de este sitio pintan su propio hover por JS
+     * (`Boton.tsx`, por ejemplo) en vez de CSS `:hover` puro — y esos sí
+     * reaccionan a estos eventos igual que a los de un ratón real. Lo único
+     * que ni esto consigue es el `:hover` de CSS en sí: el navegador lo lee
+     * del estado real del dispositivo apuntador, no de eventos despachados
+     * por JavaScript, así que ningún sitio web puede fingirlo del todo con
+     * gestos. Lo que sí queda igual de real es todo lo demás: mover el
+     * puntero, entrar y salir de elementos, presionar y soltar.
+     */
+    if (objetivo !== hoverEl.current) {
+      if (hoverEl.current) {
+        despacharPuntero('pointerout', hoverEl.current, x, y)
+        despacharPuntero('pointerleave', hoverEl.current, x, y, { bubbles: false })
+        despacharRaton('mouseout', hoverEl.current, x, y, { relatedTarget: objetivo })
+        despacharRaton('mouseleave', hoverEl.current, x, y, { relatedTarget: objetivo, bubbles: false })
+      }
+      if (objetivo) {
+        despacharPuntero('pointerover', objetivo, x, y)
+        despacharPuntero('pointerenter', objetivo, x, y, { bubbles: false })
+        despacharRaton('mouseover', objetivo, x, y, { relatedTarget: hoverEl.current })
+        despacharRaton('mouseenter', objetivo, x, y, { relatedTarget: hoverEl.current, bubbles: false })
+      }
+      hoverEl.current = objetivo
+    }
+    if (objetivo) {
+      despacharPuntero('pointermove', objetivo, x, y)
+      despacharRaton('mousemove', objetivo, x, y)
+    }
+
+    // Cierra la pinza: presiona. La abre: suelta, y el clic solo sale si
+    // sigue sobre el mismo elemento donde se cerró — igual que un ratón, que
+    // no dispara un clic si sueltas el botón fuera de donde lo apretaste.
+    if (cerrado && !previo.current && objetivo) {
+      despacharPuntero('pointerdown', objetivo, x, y, { buttons: 1 })
+      despacharRaton('mousedown', objetivo, x, y, { buttons: 1 })
+      pressEl.current = objetivo
       el?.classList.add('cursor-mano-clic')
-      setTimeout(() => el?.classList.remove('cursor-mano-clic'), 220)
+    } else if (!cerrado && previo.current) {
+      if (objetivo) {
+        despacharPuntero('pointerup', objetivo, x, y)
+        despacharRaton('mouseup', objetivo, x, y)
+        if (objetivo === pressEl.current) despacharRaton('click', objetivo, x, y)
+      }
+      pressEl.current = null
+      el?.classList.remove('cursor-mano-clic')
     }
     previo.current = cerrado
   }
@@ -285,9 +380,23 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
 
         if (!apuntando) {
           const el = cursorHand.current
-          if (el) el.style.display = 'none'
+          if (el) {
+            el.style.display = 'none'
+            el.classList.remove('cursor-mano-clic')
+          }
           clicDerecha.current = false
           clicIzquierda.current = false
+          // Ninguna mano señala: se suelta lo que estuviera bajo el cursor,
+          // para no dejar un botón "iluminado" o a medio presionar cuando la
+          // mano se baja de golpe.
+          if (hoverEl.current) {
+            despacharPuntero('pointerout', hoverEl.current, -1, -1)
+            despacharPuntero('pointerleave', hoverEl.current, -1, -1, { bubbles: false })
+            despacharRaton('mouseout', hoverEl.current, -1, -1)
+            despacharRaton('mouseleave', hoverEl.current, -1, -1, { bubbles: false })
+            hoverEl.current = null
+          }
+          pressEl.current = null
         }
 
         // Mano fuera de cuadro: se suelta la referencia, no el zoom. Así se
