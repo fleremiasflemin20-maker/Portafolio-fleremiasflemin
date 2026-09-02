@@ -11,7 +11,7 @@
  *
  *   npm run prueba
  */
-import { esPuno, pinza, centro, palanca, zoomDesdePinza, referenciaValida } from '../.pruebas/manos.mjs'
+import { esPuno, unDedo, pinza, centro, palanca, zoomDesdePinza, referenciaValida } from '../.pruebas/manos.mjs'
 
 // Manos sintéticas en coordenadas de imagen (0..1, la y crece hacia abajo).
 // Mano vertical, muñeca abajo y dedos hacia arriba.
@@ -47,6 +47,18 @@ const puno = () => {
 const pinzaCerrada = () => { const p = base(); p[4] = { x: 0.455, y: 0.315, z: 0 }; return p }
 const pinzaAbierta = () => { const p = base(); p[4] = { x: 0.16, y: 0.60, z: 0 }; return p }
 
+// Un dedo: índice estirado como en `base()`, corazón/anular/meñique recogidos
+// como en `puno()`. El pulgar queda donde estaba — el gesto no depende de él.
+const unDedoPose = () => {
+  const p = base()
+  for (const mcp of [9, 13, 17]) {
+    p[mcp + 1] = { x: p[mcp].x, y: 0.52, z: 0 }
+    p[mcp + 2] = { x: p[mcp].x, y: 0.58, z: 0 }
+    p[mcp + 3] = { x: p[mcp].x, y: 0.62, z: 0 }
+  }
+  return p
+}
+
 let fallos = 0
 const comprobar = (nombre, ok, detalle) => {
   console.log(`${ok ? '  ok ' : 'FALLA'}  ${nombre}${detalle ? '   → ' + detalle : ''}`)
@@ -55,6 +67,15 @@ const comprobar = (nombre, ok, detalle) => {
 
 comprobar('palma abierta no es puño', esPuno(base()) === false)
 comprobar('puño es puño', esPuno(puno()) === true)
+
+comprobar('palma abierta no es un dedo', unDedo(base()) === false)
+comprobar('puño no es un dedo', unDedo(puno()) === false)
+comprobar('un dedo se reconoce como un dedo', unDedo(unDedoPose()) === true)
+// Cierra el pulgar sobre un dedo que ya señala: el gesto de clic no debe
+// deshacer el de apuntar, son la misma mano en el mismo instante.
+const unDedoClicPose = () => { const p = unDedoPose(); p[4] = { x: 0.455, y: 0.315, z: 0 }; return p }
+comprobar('un dedo con el pulgar cerrado sigue siendo un dedo', unDedo(unDedoClicPose()) === true)
+comprobar('y la pinza de esa pose cuenta como clic', pinza(unDedoClicPose()) < 0.42, pinza(unDedoClicPose()).toFixed(2))
 
 const pc = pinza(pinzaCerrada()), pa = pinza(pinzaAbierta()), pn = pinza(base())
 comprobar('pinza cerrada < abierta', pc < pa, `cerrada ${pc.toFixed(2)} · neutra ${pn.toFixed(2)} · abierta ${pa.toFixed(2)}`)

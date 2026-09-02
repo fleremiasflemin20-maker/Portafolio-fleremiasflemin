@@ -55,6 +55,32 @@ export function esPuno(p: Punto[]): boolean {
 }
 
 /**
+ * ¿Un dedo señalando?
+ *
+ * Índice estirado —más lejos de la muñeca que su propio nudillo, el mismo
+ * criterio que `esPuno` pero al revés— y al menos dos de los otros tres
+ * doblados. Con los tres exigidos el gesto no se detectaba en manos donde el
+ * meñique no dobla del todo, igual que en `esPuno`.
+ *
+ * El pulgar queda fuera a propósito: tiene que poder moverse libre para
+ * juntarse con el índice y disparar el clic sin deshacer el gesto.
+ */
+export function unDedo(p: Punto[]): boolean {
+  const indiceEstirado = dist(p[INDICE], p[MUNECA]) > dist(p[6], p[MUNECA])
+  if (!indiceEstirado) return false
+  let doblados = 0
+  for (const [punta, nudillo] of DEDOS.slice(1)) {
+    if (dist(p[punta], p[MUNECA]) < dist(p[nudillo], p[MUNECA])) doblados++
+  }
+  return doblados >= 2
+}
+
+/** La punta del índice: dónde apunta el gesto de un dedo. */
+export function puntaIndice(p: Punto[]): Punto {
+  return p[INDICE]
+}
+
+/**
  * Apertura de la pinza pulgar–índice, normalizada por el tamaño de la mano.
  *
  * Sale más o menos entre 0.25 con los dedos juntos y 1.2 bien abiertos. Es el

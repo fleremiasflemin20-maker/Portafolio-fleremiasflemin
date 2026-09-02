@@ -105,6 +105,33 @@
 }
 
 @layer components {
+  /*
+   * El cursor por gestos. Ver ControlManos.tsx.
+   *
+   * La posición y la escala del clic se escriben por `style.transform` desde
+   * el bucle de detección — a 24 fps, tocar clases de React repintaría el
+   * árbol entero. Lo único que queda para CSS es lo que sí puede vivir en una
+   * clase sin pisarse con eso: el relleno del círculo y el destello del clic.
+   */
+  .cursor-mano-cerrado span {
+    background-color: rgb(59 224 208 / 0.4);
+  }
+
+  .cursor-mano-clic {
+    animation: clicMano 220ms ease-out;
+  }
+
+  @keyframes clicMano {
+    0% { box-shadow: 0 0 0 0 rgb(59 224 208 / 0.6); }
+    100% { box-shadow: 0 0 0 14px rgb(59 224 208 / 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cursor-mano-clic { animation: none }
+  }
+}
+
+@layer components {
   .cursor-intro {
     animation: parpadeo 1s steps(2) infinite;
   }

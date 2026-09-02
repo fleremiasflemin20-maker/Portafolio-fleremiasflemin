@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { HandLandmarker } from '@mediapipe/tasks-vision'
-import { manos, centro, esPuno, palanca, pinza, referenciaValida, zoomDesdePinza, type Punto } from '../lib/manos'
+import { manos, centro, esPuno, palanca, pinza, puntaIndice, referenciaValida, unDedo, zoomDesdePinza, type Punto } from '../lib/manos'
 
 /*
  * El WASM y el modelo se piden a una CDN y no van en el repositorio.
@@ -22,6 +22,9 @@ const MUERTA = 0.1
 const TOPE = 0.3
 /** Milisegundos entre dos cambios de faceta seguidos. */
 const ESPERA_FACETA = 1100
+/** Pinza por debajo de este valor cuenta como clic. `pinza()` da ~0.25 con los
+    dedos juntos del todo: el margen es para que no haga falta cerrarla al máximo. */
+const UMBRAL_CLIC = 0.42
 /** Detección a 24 fps: a 60 le roba demasiado tiempo de GPU a la escena 3D. */
 const PERIODO = 1000 / 24
 
@@ -69,6 +72,16 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
   const facetaRef = useRef(onFaceta)
   facetaRef.current = onFaceta
 
+  /* El cursor por gestos: un elemento aparte del canvas del esqueleto, porque
+     este tiene que verse por encima de toda la página, no solo del panel de
+     control. Se mueve por estilo directo en el bucle de detección — como
+     estado de React repintaría el árbol entero 24 veces por segundo. */
+  const cursorHand = useRef<HTMLDivElement>(null)
+  /** Si la pinza ya estaba cerrada el fotograma anterior, por mano. Sin esto
+      un clic mantenido dispara uno nuevo en cada fotograma. */
+  const clicDerecha = useRef(false)
+  const clicIzquierda = useRef(false)
+
   /** Corta la cámara de verdad: soltar la referencia deja el piloto encendido. */
   const apagar = useCallback(() => {
     cancelAnimationFrame(bucle.current)
@@ -78,6 +91,7 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
     detector.current = null
     if (video.current) video.current.srcObject = null
     manos.zoom = 1
+    if (cursorHand.current) cursorHand.current.style.display = 'none'
     setVisto({ control: false, camara: false })
     setEstado('apagado')
   }, [])
@@ -125,6 +139,42 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  /*
+   * Apuntar: mueve el cursor a donde señala el índice y dispara un clic real
+   * si la pinza se acaba de cerrar.
+   *
+   * `elementFromPoint` + `.click()` y no un evento sintético a mano: `.click()`
+   * es el mismo camino que usa el navegador con un clic de ratón de verdad, así
+   * que activa enlaces, botones y los `onClick` de React sin tener que simular
+   * cada paso (`pointerdown`, `mousedown`, `mouseup`...) uno por uno.
+   */
+  function apuntar(p: Punto[], previo: { current: boolean }) {
+    const punta = puntaIndice(p)
+    // Espejo, igual que el resto de la mano: la imagen no viene reflejada.
+    const x = (1 - punta.x) * window.innerWidth
+    const y = punta.y * window.innerHeight
+    const cerrado = pinza(p) < UMBRAL_CLIC
+
+    const el = cursorHand.current
+    if (el) {
+      el.style.display = 'block'
+      /* La posición y la escala del clic van en el mismo `transform`: un
+         estilo inline pisa por completo cualquier transform de una clase, así
+         que repartirlas entre JS y CSS dejaría una de las dos sin efecto. El
+         -16 centra el círculo de 32 px sobre la punta del dedo. */
+      el.style.transform = `translate(${x - 16}px, ${y - 16}px) scale(${cerrado ? 0.72 : 1})`
+      el.classList.toggle('cursor-mano-cerrado', cerrado)
+    }
+
+    if (cerrado && !previo.current) {
+      const objetivo = document.elementFromPoint(x, y)
+      if (objetivo instanceof HTMLElement) objetivo.click()
+      el?.classList.add('cursor-mano-clic')
+      setTimeout(() => el?.classList.remove('cursor-mano-clic'), 220)
+    }
+    previo.current = cerrado
+  }
+
   function arrancarBucle() {
     let anterior = performance.now()
     let ultimaDeteccion = 0
@@ -145,15 +195,43 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
         const r = det.detectForVideo(v, ahora)
         hayControl = false
         hayCamara = false
+        // Si ninguna mano apunta este fotograma, el cursor se esconde al
+        // final del bucle — igual que `refPinza` se suelta cuando la mano
+        // sale de cuadro.
+        let apuntando = false
 
         for (let i = 0; i < r.landmarks.length; i++) {
           const p = r.landmarks[i] as Punto[]
           const etiqueta = r.handedness[i]?.[0]?.categoryName ?? 'Right'
           const esDerecha = invRef.current ? etiqueta === 'Left' : etiqueta === 'Right'
 
+          /*
+           * Un dedo, en cualquiera de las dos manos, apunta el cursor.
+           *
+           * Va antes del reparto por mano y no dentro de cada rama: el gesto
+           * se reconoce por la forma de la mano, no por cuál es — apuntar con
+           * la izquierda tiene que funcionar igual que con la derecha. Mientras
+           * se apunta, esa mano deja en pausa lo que hiciera normalmente
+           * (scroll/faceta a la derecha, zoom a la izquierda): no tiene sentido
+           * que el cursor se mueva y la página se desplace a la vez.
+           */
+          if (unDedo(p)) {
+            apuntando = true
+            if (esDerecha) {
+              hayControl = true
+              velocidad = 0
+              apuntar(p, clicDerecha)
+            } else {
+              hayCamara = true
+              apuntar(p, clicIzquierda)
+            }
+            continue
+          }
+
           if (esDerecha) {
             hayControl = true
             const c = centro(p)
+            clicDerecha.current = false
 
             /*
              * El puño frena.
@@ -189,6 +267,7 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
             }
           } else {
             hayCamara = true
+            clicIzquierda.current = false
             /*
              * Puño izquierdo: vuelve al encuadre del guion y olvida la
              * referencia, para que el siguiente gesto vuelva a calibrarse.
@@ -202,6 +281,13 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
               manos.zoom = zoomDesdePinza(v, refPinza.current)
             }
           }
+        }
+
+        if (!apuntando) {
+          const el = cursorHand.current
+          if (el) el.style.display = 'none'
+          clicDerecha.current = false
+          clicIzquierda.current = false
         }
 
         // Mano fuera de cuadro: se suelta la referencia, no el zoom. Así se
@@ -258,10 +344,29 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
   const activo = estado === 'activo'
 
   return (
-    <div className="pointer-events-none fixed bottom-5 left-5 z-40 md:bottom-8 md:left-8">
-      {/* El vídeo nunca se muestra: solo alimenta al detector. El usuario ve el
-          esqueleto dibujado, que es lo único que la página llega a usar. */}
-      <video ref={video} playsInline muted className="hidden" />
+    <>
+      {/*
+        El cursor por gestos.
+
+        Fuera del panel de control a propósito: el panel vive en una esquina,
+        pero el cursor tiene que poder pasar por encima de cualquier parte de
+        la página — el `top`/`left` a 0 y el movimiento por `transform` son lo
+        que permiten que "siga" a la mano sin quedarse encerrado en un
+        contenedor con posición propia.
+      */}
+      <div
+        ref={cursorHand}
+        className="cursor-mano pointer-events-none fixed left-0 top-0 z-50 hidden h-8 w-8 rounded-full border-2"
+        style={{ borderColor: '#3BE0D0' }}
+        aria-hidden="true"
+      >
+        <span className="absolute inset-1 rounded-full transition-colors duration-150" />
+      </div>
+
+      <div className="pointer-events-none fixed bottom-5 left-5 z-40 md:bottom-8 md:left-8">
+        {/* El vídeo nunca se muestra: solo alimenta al detector. El usuario ve el
+            esqueleto dibujado, que es lo único que la página llega a usar. */}
+        <video ref={video} playsInline muted className="hidden" />
 
       {!activo && (
         <button
@@ -300,6 +405,13 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
               Separa el pulgar del índice para acercar la cámara y júntalos para alejarla. Puño para
               volver al encuadre.
             </p>
+            <p className="pt-1.5" style={{ color: '#3BE0D0' }}>
+              ● Un dedo · cursor
+            </p>
+            <p className="normal-case tracking-normal text-paper/50">
+              Con cualquier mano, estira solo el índice: aparece un cursor que sigue a la punta del
+              dedo. Junta el pulgar al índice para hacer clic, como en un ratón normal.
+            </p>
           </div>
 
           <div className="flex border-t border-paper/10 font-mono text-[0.55rem] uppercase tracking-[0.12em]">
@@ -327,7 +439,8 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
             El vídeo se procesa en tu equipo y no se envía a ningún sitio.
           </p>
         </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   )
 }
