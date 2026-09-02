@@ -13,17 +13,16 @@
 import * as si from 'simple-icons'
 import { writeFileSync } from 'node:fs'
 
-// De los más conocidos a los de código abierto, que es el orden pedido.
-const ORDEN = [
-  ['siClaude', 'Claude'],
-  ['siAnthropic', 'Anthropic'],
-  ['siGooglegemini', 'Gemini'],
-  ['siMetaai', 'Meta AI'],
-  ['siMistralai', 'Mistral'],
-  ['siDeepseek', 'DeepSeek'],
-  ['siQwen', 'Qwen'],
-  ['siPerplexity', 'Perplexity'],
-  ['siGithubcopilot', 'Copilot'],
+/*
+ * Dos grupos, y la distinción importa: Copilot y Cursor son editores; Claude y
+ * Gemini son modelos. Mezclarlos en una sola fila daba a entender que todo es
+ * lo mismo, y a quien entiende del tema le resta credibilidad.
+ *
+ * Dentro de cada grupo, de lo más conocido a lo de código abierto.
+ */
+const HERRAMIENTAS = [
+  ['siAnthropic', 'Claude Code'],
+  ['siGithubcopilot', 'GitHub Copilot'],
   ['siCursor', 'Cursor'],
   ['siHuggingface', 'Hugging Face'],
   ['siOllama', 'Ollama'],
@@ -34,16 +33,30 @@ const ORDEN = [
   ['siPytorch', 'PyTorch'],
 ]
 
-const salida = ORDEN.map(([clave, nombre]) => {
-  const i = si[clave]
-  if (!i) throw new Error(`No existe ${clave} en simple-icons`)
-  return { nombre, color: `#${i.hex}`, d: i.path }
-})
+const MODELOS_IA = [
+  ['siClaude', 'Claude'],
+  ['siGooglegemini', 'Gemini'],
+  ['siMetaai', 'Llama'],
+  ['siMistralai', 'Mistral'],
+  ['siDeepseek', 'DeepSeek'],
+  ['siQwen', 'Qwen'],
+  ['siPerplexity', 'Perplexity'],
+]
+
+const mapear = (lista) =>
+  lista.map(([clave, nombre]) => {
+    const i = si[clave]
+    if (!i) throw new Error(`No existe ${clave} en simple-icons`)
+    return { nombre, color: `#${i.hex}`, d: i.path }
+  })
+
+const herramientas = mapear(HERRAMIENTAS)
+const modelos = mapear(MODELOS_IA)
 
 writeFileSync(
   'src/lib/modelos.ts',
   `/**
- * Logos de modelos y herramientas de IA.
+ * Logos de herramientas y modelos de IA.
  *
  * GENERADO por scripts/iconos.mjs — no editar a mano.
  *
@@ -51,11 +64,15 @@ writeFileSync(
  * aquí aparecen para decir con qué se trabaja, no para sugerir ninguna
  * relación con ellas.
  *
- * Faltan OpenAI, xAI y Stable Diffusion: simple-icons no los publica.
+ * Faltan OpenAI, xAI y Stable Diffusion: simple-icons no publica sus marcas.
  */
-export type Modelo = { nombre: string; color: string; d: string }
+export type Marca = { nombre: string; color: string; d: string }
 
-export const MODELOS: Modelo[] = ${JSON.stringify(salida, null, 2)}
+/** Editores y librerías: con esto se programa y se ejecutan los modelos. */
+export const HERRAMIENTAS: Marca[] = ${JSON.stringify(herramientas, null, 2)}
+
+/** Los modelos en sí: lo que responde al otro lado. */
+export const MODELOS: Marca[] = ${JSON.stringify(modelos, null, 2)}
 `,
 )
-console.log(`src/lib/modelos.ts — ${salida.length} logos`)
+console.log(`src/lib/modelos.ts — ${herramientas.length} herramientas, ${modelos.length} modelos`)
