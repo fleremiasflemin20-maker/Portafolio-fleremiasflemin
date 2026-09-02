@@ -1,80 +1,86 @@
 /**
- * Las tres facetas de Lenin, que aquí no son secciones: son **personajes**.
+ * Las tres facetas de Lenin, sacadas de su CV — no inventadas.
  *
- * La idea que sostiene la página: en GTA V cambias de personaje y cambia todo —
- * la paleta, la música, el barrio. Aquí pasa lo mismo. Que alguien haga
- * ingeniería de software, ciberseguridad y administración hotelera es raro, y
- * esconderlo en tres pestañas iguales lo vuelve ruido. Convertirlo en el
- * mecanismo central lo vuelve el argumento.
+ * La primera versión de este archivo tenía "Seguridad · Ethical hacking" como
+ * uno de los tres pilares. El CV no la menciona ni una vez: era una suposición
+ * hecha a partir de un par de repositorios sueltos. Su posicionamiento real es
+ * **Hospitality Tech Architect**, y la historia verdadera es mejor que la
+ * inventada — subió de Houseman a Housekeeping Manager en dos años y medio y
+ * convirtió ese conocimiento en su propio software.
  *
- * Cada faceta trae su degradado propio. No son tres colores de acento sueltos:
- * los tres son la misma puesta de sol de Miami mirada a distinta hora — el
- * naranja del atardecer, el púrpura de después, el dorado de antes.
+ * Eso es literalmente la estructura de GTA V: tres protagonistas cuyas
+ * historias se cruzan. Aquí son tres, y el cruce es la persona.
+ *
+ * Cada faceta trae su degradado. No son tres acentos sueltos: son la misma
+ * puesta de sol de Miami mirada a distinta hora.
  */
 export type Faceta = {
   id: string
-  /** Lo que se lee en el centro de la rueda, corto y en mayúsculas. */
+  /** Lo que se lee en la rueda, corto y en mayúsculas. */
   clave: string
   nombre: string
   papel: string
   descripcion: string
-  /** Arranque del degradado, el color que manda. */
+  /** Cuál de los dos personajes 3D representa esta faceta. */
+  modelo: 'paseo' | 'marina'
   desde: string
-  /** Final del degradado. */
   hasta: string
   /** Para el texto de acento y el HUD sobre fondo oscuro. */
   tinta: string
-  /** Cifras del HUD. Tres, que es lo que cabe sin que se lea como un informe. */
+  /** Tres cifras. Más se lee como informe, menos no dice nada. */
   stats: { etiqueta: string; valor: string }[]
 }
 
 export const FACETAS: Faceta[] = [
   {
     id: 'software',
-    clave: 'SW',
+    clave: 'DEV',
     nombre: 'Software',
-    papel: 'Ingeniero de software',
+    papel: 'Ingeniero de software · Full Stack',
     descripcion:
-      'Interfaces que no parecen plantillas. 3D en el navegador, scroll que conduce una narrativa y sitios que cargan rápido en un teléfono con datos.',
+      'React, Node y Python sobre AWS, con agentes de IA integrados donde aportan y no donde suenan bien. Formado en Santa Monica Academy, California.',
+    modelo: 'paseo',
     desde: '#FF2D8A',
     hasta: '#FF7A2F',
     tinta: '#FF9A4D',
     stats: [
-      { etiqueta: 'Stack', valor: 'React · Three.js' },
-      { etiqueta: 'Sitios en vivo', valor: '8' },
-      { etiqueta: 'Enfoque', valor: 'Producto' },
+      { etiqueta: 'Stack', valor: 'React · Node · Python' },
+      { etiqueta: 'Nube', valor: 'AWS · microservicios' },
+      { etiqueta: 'IA', valor: 'LLM · agentes' },
     ],
   },
   {
-    id: 'seguridad',
-    clave: 'SEC',
-    nombre: 'Seguridad',
-    papel: 'Ethical hacking y pentesting',
+    id: 'producto',
+    clave: 'PMS',
+    nombre: 'Hotel Tech',
+    papel: 'Founder · Fleremahias PMS',
     descripcion:
-      'La otra mitad del oficio: entender cómo se rompe lo que uno construye. Auditoría, reconocimiento y remediación.',
+      'Software de gestión hotelera pensado para Ecuador: ocho módulos, facturación electrónica al SRI, modo sin internet y un agente de IA que resuelve el 80% de las consultas de recepción.',
+    modelo: 'marina',
     desde: '#7B2CFF',
     hasta: '#FF2D8A',
     tinta: '#C77DFF',
     stats: [
-      { etiqueta: 'Área', valor: 'Ofensiva' },
-      { etiqueta: 'Herramientas', valor: 'Propias' },
-      { etiqueta: 'Enfoque', valor: 'Defensa' },
+      { etiqueta: 'Módulos', valor: '8 integrados' },
+      { etiqueta: 'Front desk', valor: '−70% tiempo' },
+      { etiqueta: 'Consultas IA', valor: '80% resueltas' },
     ],
   },
   {
     id: 'hoteleria',
     clave: 'OPS',
     nombre: 'Hotelería',
-    papel: 'Adm. de empresas hoteleras y turísticas',
+    papel: 'Ing. en Admin. de Empresas Hoteleras · UDLA',
     descripcion:
-      'Un título que no suele ir con los otros dos, y por eso vale: sé cómo funciona el negocio para el que escribo el software, no solo el software.',
+      'Empecé de Houseman y llegué a Housekeeping Manager en dos años y medio, en hoteles de lujo de Santa Monica. Cada fricción que viví ahí dentro acabó siendo una función del PMS.',
+    modelo: 'marina',
     desde: '#FFB020',
     hasta: '#FF5E5B',
     tinta: '#FFC65C',
     stats: [
-      { etiqueta: 'Sector', valor: 'Hospitalidad' },
-      { etiqueta: 'Sistema', valor: 'PMS propio' },
-      { etiqueta: 'Mercado', valor: 'Ecuador' },
+      { etiqueta: 'Ascenso', valor: 'Houseman → Manager' },
+      { etiqueta: 'En', valor: '2,5 años' },
+      { etiqueta: 'Turnover', valor: '+30%' },
     ],
   },
 ]

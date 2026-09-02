@@ -3,6 +3,7 @@ import { FACETAS } from './lib/facetas'
 import { RuedaPersonaje } from './components/RuedaPersonaje'
 import { Puesta, Grano, Palmeras, Velo } from './components/Atmosfera'
 import { Expediente } from './components/Expediente'
+import { Personaje3D } from './components/Personaje3D'
 
 export default function App() {
   const [activa, setActiva] = useState(0)
@@ -119,12 +120,27 @@ export default function App() {
           </a>
         </div>
 
-        <div className="relative mx-auto aspect-square w-full max-w-[13.5rem] shrink-0 sm:max-w-[16rem] md:max-w-sm lg:mx-0">
+        <div className="relative mx-auto aspect-square w-full max-w-[15rem] shrink-0 sm:max-w-[19rem] md:max-w-md lg:mx-0">
+          {/* La figura, detrás y desbordando el cuadro de la rueda: el anillo es
+              el mando, la persona es a quien seleccionas. */}
+          <div
+            className="pointer-events-none absolute -inset-x-[22%] -top-[30%] bottom-[-26%]"
+            style={{
+              // El lienzo termina en un borde recto que se nota. La máscara lo
+              // funde con el atardecer y la figura parece plantada en la escena.
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 72%, transparent 96%)',
+              maskImage: 'linear-gradient(to bottom, #000 72%, transparent 96%)',
+            }}
+          >
+            <Personaje3D faceta={f} />
+          </div>
+
           <RuedaPersonaje activa={activa} onCambio={cambiar} />
 
-          {/* El centro va fuera del SVG: es texto que cambia, y en HTML se
-              compone y se lee mejor que dentro del gráfico. */}
-          <div className="pointer-events-none absolute inset-0 grid place-items-center">
+          {/* Va bajo el anillo y no en su centro: ese hueco es de la cara del
+              personaje. Con el rótulo encima, ni se leía el nombre ni se veía
+              la figura. */}
+          <div className="pointer-events-none absolute inset-x-0 -bottom-14 grid place-items-center md:-bottom-16">
             <div key={f.id} className="entra text-center">
               <p className="font-display text-xl uppercase leading-none tracking-tight md:text-2xl" style={{ color: 'var(--tinta)' }}>
                 {f.nombre}
@@ -162,9 +178,41 @@ export default function App() {
           </h2>
 
           <p className="mt-6 max-w-lg text-body text-paper/70">
-            Escribo el software, entiendo cómo se rompe y conozco el negocio para el que se
-            escribe. No son tres carreras sueltas: es la misma, mirada desde tres sitios.
+            Ingeniero en Administración de Empresas Hoteleras por la UDLA e ingeniero de software
+            por Santa Monica Academy. Empecé de Houseman y llegué a Housekeeping Manager en dos
+            años y medio; cada fricción que viví ahí dentro acabó siendo una función del PMS que
+            construí.
           </p>
+
+          {/* Los datos de contacto van escritos, no solo en botones: alguien que
+              te quiere llamar no debería tener que abrir LinkedIn para buscarlos. */}
+          <dl className="mt-8 grid gap-x-10 gap-y-4 font-mono text-[0.72rem] sm:grid-cols-2">
+            {[
+              ['Correo', 'fleremias@outlook.com', 'mailto:fleremias@outlook.com'],
+              ['Teléfono', '+593 979 523 040', 'tel:+593979523040'],
+              ['Web', 'fleremias.dev', 'https://fleremias.dev'],
+              ['Dónde', 'Quito, EC · Los Angeles, CA', ''],
+            ].map(([etiqueta, valor, enlace]) => (
+              <div key={etiqueta}>
+                <dt className="text-[0.62rem] uppercase tracking-[0.18em] text-paper/40">
+                  {etiqueta}
+                </dt>
+                <dd className="mt-1">
+                  {enlace ? (
+                    <a
+                      href={enlace}
+                      className="underline decoration-paper/20 underline-offset-4 transition-colors hover:decoration-current"
+                      style={{ color: 'var(--tinta)' }}
+                    >
+                      {valor}
+                    </a>
+                  ) : (
+                    <span style={{ color: 'var(--tinta)' }}>{valor}</span>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
 
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
             <a

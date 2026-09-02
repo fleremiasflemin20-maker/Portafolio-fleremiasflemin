@@ -11,7 +11,7 @@
  */
 export type Proyecto = {
   nombre: string
-  faceta: 'software' | 'seguridad' | 'hoteleria'
+  faceta: 'software' | 'producto' | 'hoteleria'
   resumen: string
   /** Lo que hace especial a esta pieza. Una línea, técnica, sin adjetivos. */
   nota: string
@@ -24,6 +24,14 @@ const PAGES = 'https://fleremiasflemin20-maker.github.io'
 const GH2 = 'https://github.com/fleremahiasflemin'
 
 export const PROYECTOS: Proyecto[] = [
+  {
+    nombre: 'Fleremahias PMS',
+    faceta: 'producto',
+    resumen: 'Gestión hotelera SaaS para Ecuador y LATAM.',
+    nota: 'Ocho módulos, facturación SRI con XML firmado y modo sin internet.',
+    sitio: 'https://fleremias-landing.vercel.app',
+    codigo: `${GH}/fleremiasPMS`,
+  },
   {
     nombre: 'Gogeta SSJ4',
     faceta: 'software',
@@ -82,32 +90,24 @@ export const PROYECTOS: Proyecto[] = [
   },
   {
     nombre: 'VulnScanner Pro',
-    faceta: 'seguridad',
+    faceta: 'software',
     resumen: 'Escáner de vulnerabilidades.',
     nota: 'Python. Reconocimiento y reporte automatizados.',
     codigo: `${GH2}/vulnscanner-pro`,
   },
   {
     nombre: 'ShadowHunter',
-    faceta: 'seguridad',
+    faceta: 'software',
     resumen: 'Herramienta de OSINT.',
     nota: 'Recolección de inteligencia de fuentes abiertas.',
     codigo: `${GH2}/C-Users-flere-Downloads-shadowhunter_osint.zip-ShadowHunter_OSINT`,
   },
   {
     nombre: 'SocialHawk',
-    faceta: 'seguridad',
+    faceta: 'software',
     resumen: 'Reconocimiento en redes sociales.',
     nota: 'Superficie de exposición pública de una persona u organización.',
     codigo: `${GH2}/C-Users-flere-Downloads-SocialHawk_Deployable.zip`,
-  },
-  {
-    nombre: 'Fleremahias PMS',
-    faceta: 'hoteleria',
-    resumen: 'Sistema de gestión hotelera para Ecuador.',
-    nota: 'Facturación SRI y modo offline: en un hotel el internet se cae.',
-    sitio: `${PAGES}/fleremiasPMS/`,
-    codigo: `${GH}/fleremiasPMS`,
   },
   {
     nombre: 'Andy Detalles',
