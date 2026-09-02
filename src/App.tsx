@@ -9,6 +9,7 @@ import { RuedaPersonaje } from './components/RuedaPersonaje'
 import { Grano } from './components/Atmosfera'
 import { Expediente } from './components/Expediente'
 import { Cinematica } from './components/Cinematica'
+import { Boton } from './components/Boton'
 
 export default function App() {
   const relato = useRef<HTMLDivElement>(null)
@@ -165,6 +166,18 @@ export default function App() {
               </h2>
 
               <p className="mt-6 text-body text-paper/75">{c.texto}</p>
+
+              {/* Solo en el primer capítulo: quien llega y decide en diez
+                  segundos que le interesa, tiene que poder ir al código sin
+                  recorrer la página entera. */}
+              {i === 0 && (
+                <div className={`mt-9 flex flex-wrap items-center gap-x-7 gap-y-4 ${c.lado === 'der' ? 'md:justify-end' : ''}`}>
+                  <Boton href="https://github.com/fleremiasflemin20-maker">GitHub</Boton>
+                  <Boton href="https://www.linkedin.com/in/fleremahiaslenin" secundario>
+                    LinkedIn
+                  </Boton>
+                </div>
+              )}
             </div>
           </section>
         ))}
@@ -211,17 +224,10 @@ export default function App() {
               ))}
             </dl>
 
-            <a
-              href="https://www.linkedin.com/in/fleremahiaslenin"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-10 inline-block border-2 px-10 py-4 font-mono text-caption font-bold uppercase transition-colors duration-300 hover:text-ink"
-              style={{ borderColor: 'var(--tinta)', color: 'var(--tinta)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--tinta)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-            >
-              LinkedIn
-            </a>
+            <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
+              <Boton href="https://github.com/fleremiasflemin20-maker">GitHub</Boton>
+              <Boton href="https://www.linkedin.com/in/fleremahiaslenin">LinkedIn</Boton>
+            </div>
           </div>
         </section>
       </main>
