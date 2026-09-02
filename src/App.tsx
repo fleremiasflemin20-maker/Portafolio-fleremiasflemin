@@ -169,7 +169,16 @@ export default function App() {
               }`}
             />
 
-            <div className={`copia pointer-events-auto w-full max-w-xl ${c.lado === 'der' ? 'md:text-right' : ''}`}>
+            {/*
+              720 px y no 576: el título más largo —«Housekeeping» a 80 px—
+              mide 701, y con la caja a 576 se salía por la derecha de la
+              pantalla. `ml-auto` no lo arreglaba: un hijo más ancho que su
+              padre resuelve los márgenes automáticos a cero.
+
+              El párrafo se queda en 576 aparte, que es la medida en la que un
+              texto se lee sin perder el renglón.
+            */}
+            <div className={`copia pointer-events-auto w-full max-w-[45rem] ${c.lado === 'der' ? 'md:text-right' : ''}`}>
               <p className="font-mono text-caption uppercase" style={{ color: 'var(--tinta)' }}>
                 {c.anio ? `${c.anio} · ` : ''}{c.rotulo}
               </p>
@@ -178,14 +187,36 @@ export default function App() {
               </p>
 
               <TituloVivo
-                className="mt-5"
+                /*
+                  El título se mide solo (`w-max`) en vez de encajarse en el
+                  ancho del bloque de texto.
+
+                  Las letras van en spans sueltos y la línea lleva
+                  `whitespace-nowrap` para que no se parta entre letras — sin
+                  eso, la «A» de BONILLA se caía a una tercera línea. El precio
+                  era que una palabra larga desbordaba el contenedor: medido,
+                  «Housekeeping» a 80 px ocupa 701 px dentro de una caja de 576,
+                  y esos 125 px sobrantes eran una barra de scroll horizontal en
+                  toda la página.
+
+                  Con `w-max` la caja del título se ajusta a su contenido, y
+                  `ml-auto` en los capítulos de la derecha hace que crezca hacia
+                  dentro en vez de salirse por el borde.
+                */
+                className={`mt-5 w-max ${c.lado === 'der' ? 'md:ml-auto' : ''}`}
                 entrada={c.entrada}
                 lineas={c.titulo}
                 gradienteUltima={i === 0}
-                style={{ fontSize: i === 0 ? 'clamp(3.2rem,9vw,8rem)' : 'clamp(2.2rem,6vw,5rem)' }}
+                /* El tope baja de 5rem a 4.5rem por el capítulo 3: a 80 px
+                   «Housekeeping» ocupa 701 px y a 1440 dejaba solo 30 px entre
+                   el título y el hombro de la figura. A 72 px son 631, y el
+                   aire sube a algo más de cien. */
+                style={{ fontSize: i === 0 ? 'clamp(3.2rem,9vw,8rem)' : 'clamp(2.2rem,5.4vw,4.5rem)' }}
               />
 
-              <p className="mt-6 text-body text-paper/75">{c.texto}</p>
+              <p className={`mt-6 max-w-xl text-body text-paper/75 ${c.lado === 'der' ? 'md:ml-auto' : ''}`}>
+                {c.texto}
+              </p>
 
               {/* Solo en el primer capítulo: quien llega y decide en diez
                   segundos que le interesa, tiene que poder ir al código sin

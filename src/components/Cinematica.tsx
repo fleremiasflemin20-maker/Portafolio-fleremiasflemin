@@ -35,6 +35,7 @@ export function Cinematica() {
   const [escrito, setEscrito] = useState('')
   const [terminado, setTerminado] = useState(false)
   const [fuera, setFuera] = useState(false)
+  const [desmontado, setDesmontado] = useState(false)
 
   /*
    * Un solo bucle para toda la escritura, montado una vez.
@@ -86,6 +87,23 @@ export function Cinematica() {
     else raiz.classList.add('cargando')
     return () => raiz.classList.remove('cargando')
   }, [fuera])
+
+  /*
+   * Y cuando el telón termina de irse, se desmonta.
+   *
+   * Con `visibility: hidden` bastaba para no verlo, pero seguía ocupando sitio:
+   * la escala de 1.08 sobre una capa del tamaño de la ventana la dejaba en
+   * -76..1996 en una pantalla de 1920, y eso son 30 px de barra horizontal en
+   * toda la página. Medido con `scrollWidth`. Se espera a que acabe la
+   * transición —1400 ms, más un margen— y se quita del árbol.
+   */
+  useEffect(() => {
+    if (!fuera) return
+    const t = setTimeout(() => setDesmontado(true), 1600)
+    return () => clearTimeout(t)
+  }, [fuera])
+
+  if (desmontado) return null
 
   const lineas = escrito.split('\n')
 

@@ -29,7 +29,7 @@ export const CAPITULOS: Capitulo[] = [
     lugar: 'Quito, EC · Los Angeles, CA',
     titulo: ['Lenin', 'Bonilla'],
     texto:
-      'Ingeniero en Administración de Empresas Hoteleras por la UDLA e ingeniero de software por Santa Monica Academy. Construyo la tecnología que los hoteles necesitan de verdad, diseñada por alguien que vivió la operación desde dentro.',
+      'Ingeniero en Administración de Empresas Hoteleras por la UDLA e ingeniero de software por X Academy, en Santa Monica, CA, una academia fundada por un ecuatoriano en Estados Unidos. Construyo la tecnología que los hoteles necesitan de verdad, diseñada por alguien que vivió la operación desde dentro.',
     lado: 'izq',
     entrada: 'caida',
   },

@@ -45,7 +45,7 @@ export const FACETAS: Faceta[] = [
     nombre: 'Software',
     papel: 'Ingeniero de software · Full Stack',
     descripcion:
-      'React, Node y Python sobre AWS, con agentes de IA integrados donde aportan y no donde suenan bien. Formado en Santa Monica Academy, California.',
+      'React, Node y Python sobre AWS, con agentes de IA integrados donde aportan y no donde suenan bien. Formado en X Academy, Santa Monica, CA, fundada por un ecuatoriano en Estados Unidos.',
     modelo: 'paseo',
     desde: '#FF2D8A',
     hasta: '#FF7A2F',
