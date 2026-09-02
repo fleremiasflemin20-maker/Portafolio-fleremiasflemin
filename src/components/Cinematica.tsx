@@ -171,7 +171,7 @@ export function Cinematica() {
         </h1>
 
         <p
-          className="letra-intro mt-4 max-w-md font-mono text-[0.78rem] uppercase tracking-[0.24em] md:text-sm"
+          className="letra-intro mt-5 max-w-xl font-mono text-base uppercase tracking-[0.26em] md:text-xl lg:text-2xl"
           style={{ animationDelay: `${400 + NOMBRE.length * 55 + 260}ms`, color: 'var(--tinta, #FF9A4D)' }}
         >
           O dime solo Flemin
