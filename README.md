@@ -15,7 +15,7 @@
 <br/>
 
 <p align="center">
-  <img src="./docs/escritorio-software.png" width="90%" alt="Vista previa" />
+  <img src="https://github.com/user-attachments/assets/f8413855-97b8-4cb2-b506-7deeffd448a0" width="90%" alt="Vista previa" />
 </p>
 
 ## Sobre el proyecto
@@ -28,7 +28,7 @@ Nace de un problema real: hacer ingeniería de software, ciberseguridad y admini
 
 <table>
 <tr>
-<td width="33%"><img src="./docs/escritorio-software.png" alt="Software"/><br/><b>Software</b><br/>rosa → naranja</td>
+<td width="33%"><img src="https://github.com/user-attachments/assets/f8413855-97b8-4cb2-b506-7deeffd448a0" alt="Software"/><br/><b>Software</b><br/>rosa → naranja</td>
 <td width="33%"><img src="./docs/escritorio-seguridad.png" alt="Seguridad"/><br/><b>Seguridad</b><br/>púrpura → magenta</td>
 <td width="33%"><img src="./docs/escritorio-hoteleria.png" alt="Hotelería"/><br/><b>Hotelería</b><br/>dorado → coral</td>
 </tr>
