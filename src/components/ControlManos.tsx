@@ -262,7 +262,37 @@ export function ControlManos({ onFaceta }: { onFaceta: (paso: 1 | -1) => void })
       if (objetivo) {
         despacharPuntero('pointerup', objetivo, x, y)
         despacharRaton('mouseup', objetivo, x, y)
-        if (objetivo === pressEl.current) despacharRaton('click', objetivo, x, y)
+        /*
+         * El clic de verdad.
+         *
+         * Un evento construido por JavaScript nunca es de confianza
+         * (`isTrusted` sale `false`), y los navegadores solo siguen un
+         * enlace, envían un formulario o marcan una casilla con eventos de
+         * confianza. `.click()` es la excepción a propósito: el estándar lo
+         * define para disparar la acción por defecto aunque venga de un
+         * script.
+         *
+         * Pero con enlaces a `target="_blank"` no basta ni con eso. Abrir
+         * pestaña es un pop-up a ojos del navegador, y los pop-ups solo se
+         * permiten dentro del gesto de un usuario real — comprobado: incluso
+         * `.click()` en un enlace `_blank` se queda callado, sin abrir nada,
+         * si no viene de un evento de verdad como un clic físico. La cámara
+         * entrega los gestos por un bucle de `requestAnimationFrame`, no por
+         * un evento de entrada, así que para el navegador nunca cuenta como
+         * gesto de usuario. No hay forma de sortear esto desde el código: es
+         * la misma barrera que frena a los pop-ups de publicidad.
+         *
+         * La salida es navegar en la misma pestaña en vez de abrir una
+         * nueva — eso sí lo permite siempre, con gesto de mano o sin él.
+         */
+        if (objetivo === pressEl.current && objetivo instanceof HTMLElement) {
+          const enlace = objetivo.closest('a[href]')
+          if (enlace instanceof HTMLAnchorElement && enlace.target === '_blank') {
+            window.location.href = enlace.href
+          } else {
+            objetivo.click()
+          }
+        }
       }
       pressEl.current = null
       el?.classList.remove('cursor-mano-clic')
