@@ -13,10 +13,32 @@ import { Boton } from './components/Boton'
 import { Golpes } from './components/Golpes'
 import { TituloVivo } from './components/TituloVivo'
 import { Modelos } from './components/Modelos'
+import { PanelRetro } from './components/PanelRetro'
 
 export default function App() {
   const relato = useRef<HTMLDivElement>(null)
   const [activa, setActiva] = useState(0)
+
+  /*
+    ¿Cabe el panel lateral?
+
+    Hacen falta las dos medidas. El ancho, porque por debajo de 1280 no queda
+    franja libre a la derecha de la figura y el panel se le monta en el hombro.
+    Y el alto, porque el panel mide 665 px: en un portátil de 720 taparía la
+    pantalla de arriba abajo y chocaría con las escuadras del HUD.
+
+    Una sola consulta y no dos clases complementarias (`xl:block` /
+    `xl:hidden`): con dos, cualquier retoque en una deja un hueco en el que la
+    información no aparece por ningún lado.
+  */
+  const [panelLateral, setPanelLateral] = useState(false)
+  useEffect(() => {
+    const mq = matchMedia('(min-width: 1280px) and (min-height: 760px)')
+    const leer = () => setPanelLateral(mq.matches)
+    leer()
+    mq.addEventListener('change', leer)
+    return () => mq.removeEventListener('change', leer)
+  }, [])
   const f = FACETAS[activa]
 
   /* La paleta viaja por variables CSS: un solo sitio que escribir y un solo
@@ -177,12 +199,23 @@ export default function App() {
                 </div>
               )}
 
-              {i === 0 && (
+              {/* Cuando el panel lateral no cabe, la misma información se sirve
+                  aquí, en fila, bajo el texto. */}
+              {i === 0 && !panelLateral && (
                 <div className="mt-12 border-t border-paper/10 pt-8">
                   <Modelos compacto />
                 </div>
               )}
             </div>
+
+            {/* Medido a 1920: la figura ocupa 1139-1443 y el texto 80-656. Lo
+                que queda libre es la franja de la derecha, ~397 px. Ahí cabe el
+                panel sin tocar ninguna de las dos cosas. */}
+            {i === 0 && panelLateral && (
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 2xl:right-12">
+                <PanelRetro />
+              </div>
+            )}
           </section>
         ))}
         </div>
