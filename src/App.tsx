@@ -9,6 +9,7 @@ import { RuedaPersonaje } from './components/RuedaPersonaje'
 import { Grano } from './components/Atmosfera'
 import { Expediente } from './components/Expediente'
 import { Galeria } from './components/Galeria'
+import { IslasDeAether } from './components/IslasDeAether'
 import { Cinematica } from './components/Cinematica'
 import { Boton } from './components/Boton'
 import { BotonCV } from './components/BotonCV'
@@ -275,6 +276,13 @@ export default function App() {
             despedida y los datos de contacto sigan siendo lo último. */}
         <div className="pointer-events-auto">
           <Galeria />
+        </div>
+
+        {/* La única pieza que no se mira: se juega. Va después de la galería
+            porque necesita que ya se sepa quién la hizo, y antes del cierre
+            porque el cierre tiene que seguir siendo lo último. */}
+        <div className="pointer-events-auto">
+          <IslasDeAether />
         </div>
 
         <section className="pointer-events-auto relative px-6 pb-32 pt-8 md:px-12 lg:px-20">

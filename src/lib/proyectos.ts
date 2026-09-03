@@ -42,6 +42,15 @@ const galeria = (archivo: string) => `${BASE}/galeria/${archivo}`
 
 export const PROYECTOS: Proyecto[] = [
   {
+    nombre: 'Islas de Aether',
+    faceta: 'software',
+    resumen: 'Un mundo 3D sin borde renderizado solo con caracteres.',
+    nota: 'Medio millón de puntos, z-buffer propio y render en Worker. 68 KB, cero dependencias.',
+    sitio: `${PAGES}/islas-de-aether/`,
+    codigo: `${GH}/islas-de-aether`,
+    imagen: galeria('islas-de-aether.png'),
+  },
+  {
     nombre: 'Fleremahias PMS',
     faceta: 'producto',
     resumen: 'Gestión hotelera SaaS para Ecuador y LATAM.',

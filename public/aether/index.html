@@ -1,0 +1,1400 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Un mundo de fantasía sin borde renderizado enteramente con caracteres ASCII: sectores procedurales, luz en tiempo real, ciclo día/noche, dragones y faros que encender. Motor propio en un solo archivo HTML.">
+<meta name="theme-color" content="#04060d">
+<meta property="og:title" content="Islas de Aether">
+<meta property="og:description" content="Un mundo de fantasía sin borde hecho solo de caracteres. Sin texturas, sin mallas 3D.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%AA%90</text></svg>">
+<style>
+  html{color-scheme:dark}
+  body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>Islas de Aether</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+</head>
+<body>
+<style>
+  :root{
+    --ink:#dbe3f6; --dim:#8a93b4; --aether:#5fe3d0; --ember:#f2b45c;
+    --alarm:#ff7a72; --rule:rgba(140,152,196,.32);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{background:#04060d;color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,monospace;overflow:hidden;
+       -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  #stage{position:fixed;inset:0;cursor:grab;touch-action:none}
+  #stage.dragging{cursor:grabbing}
+  canvas#c{display:block;width:100%;height:100%}
+
+  .hud{position:fixed;pointer-events:none;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-shadow:0 1px 6px rgba(0,0,0,.9);z-index:2}
+  .brand{top:20px;left:24px}
+  .brand h1{font-family:Cinzel,"Times New Roman",serif;font-size:25px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);margin:0;text-shadow:0 0 22px rgba(0,0,0,.85)}
+  .brand p{margin:6px 0 0;font-size:10.5px;letter-spacing:.24em;color:var(--dim)}
+
+  .readout{top:22px;right:24px;text-align:right;font-variant-numeric:tabular-nums;line-height:1.85}
+  .readout b{color:var(--aether);font-weight:500;letter-spacing:.1em}
+
+  .keys{left:24px;bottom:20px;display:flex;flex-wrap:wrap;gap:6px 15px;max-width:min(72vw,860px)}
+  .keys span{display:inline-flex;align-items:center;gap:7px}
+  kbd{font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;color:var(--ink);border:1px solid var(--rule);border-bottom-width:2px;border-radius:3px;padding:4px 6px;background:rgba(10,14,26,.72)}
+  .mode{right:24px;bottom:20px;color:var(--ember);letter-spacing:.2em}
+  .mode.free{color:var(--aether)}
+  #snd{right:24px;bottom:44px;color:var(--dim);letter-spacing:.2em}
+  #snd::before{content:"♪ audio off"}
+  #snd.on{color:var(--aether)}
+  #snd.on::before{content:"♪ audio on"}
+
+  #alert{left:50%;top:74px;transform:translateX(-50%);color:var(--alarm);letter-spacing:.26em;font-size:11.5px;opacity:0;transition:opacity .35s}
+  #alert.on{opacity:1}
+  .hint{left:50%;bottom:88px;transform:translateX(-50%);opacity:0;transition:opacity .3s;color:var(--ember);letter-spacing:.22em}
+  .hint.on{opacity:1}
+  #toast{left:50%;top:44%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity .5s;width:100%}
+  #toast.on{opacity:1}
+  #toast .b{font-family:Cinzel,serif;font-size:clamp(22px,4vw,32px);letter-spacing:.22em;color:var(--ink);display:block}
+  #toast .s{font-size:10.5px;letter-spacing:.28em;color:var(--dim);display:block;margin-top:10px}
+
+  #boot{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:18px;background:#04060d;z-index:9;text-align:center;padding:20px}
+  #boot h2{font-family:Cinzel,serif;font-size:clamp(18px,4vw,22px);letter-spacing:.24em;text-transform:uppercase;margin:0;color:var(--ink)}
+  #boot p{margin:0;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--dim)}
+  #bar{width:min(280px,70vw);height:2px;background:rgba(140,152,196,.22)}
+  #bar i{display:block;height:100%;width:0;background:var(--aether);transition:width .25s}
+  #boot[hidden]{display:none!important}
+
+  #mapwrap{position:fixed;inset:0;display:grid;place-content:center;background:rgba(4,6,13,.88);z-index:8;padding:16px}
+  #mapwrap[hidden]{display:none!important}
+  #map{border:1px solid var(--rule);background:#06090f;max-width:92vw;max-height:78vh}
+  #mapfoot{margin-top:14px;text-align:center;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}
+
+  #engine{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(660px,90vw);max-height:84vh;overflow-y:auto;background:rgba(6,9,20,.96);border:1px solid var(--rule);padding:28px 30px 30px;line-height:1.7;font-size:13px;color:var(--ink);box-shadow:0 30px 90px rgba(0,0,0,.75);z-index:10}
+  #engine[hidden]{display:none!important}
+  #engine h2{font-family:Cinzel,serif;font-size:15px;letter-spacing:.18em;text-transform:uppercase;margin:0 0 4px;font-weight:600}
+  #engine .sub{color:var(--dim);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;margin:0 0 22px}
+  #engine ol{margin:0;padding:0;list-style:none;display:grid;gap:16px;counter-reset:step}
+  #engine li{display:grid;grid-template-columns:26px 1fr;gap:14px;counter-increment:step}
+  #engine li::before{content:counter(step,decimal-leading-zero);color:var(--aether);font-size:11px;letter-spacing:.1em;padding-top:3px;font-variant-numeric:tabular-nums}
+  #engine strong{color:var(--ember);font-weight:500}
+  #engine code{color:var(--aether);font-size:12px}
+  #engine .close{margin-top:22px;padding-top:16px;border-top:1px solid var(--rule);color:var(--dim);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase}
+
+  /* ---- táctil ---- */
+  #pad{position:fixed;width:104px;height:104px;margin:-52px 0 0 -52px;border:1px solid rgba(95,227,208,.35);border-radius:50%;opacity:0;transition:opacity .18s;z-index:3;pointer-events:none}
+  #pad.on{opacity:1}
+  #knob{position:absolute;left:50%;top:50%;width:44px;height:44px;border-radius:50%;background:rgba(95,227,208,.30);transform:translate(-22px,-22px)}
+  #tbtns{position:fixed;right:16px;bottom:96px;display:none;flex-direction:column;gap:10px;z-index:4}
+  body.touch #tbtns{display:flex}
+  body.touch .keys{display:none}
+  body.touch .brand h1{font-size:19px}
+  body.touch .readout{font-size:10px;line-height:1.7}
+  #tbtns button{width:62px;height:44px;border:1px solid var(--rule);border-radius:4px;background:rgba(10,14,26,.78);color:var(--ink);
+    font:500 10px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
+  #tbtns button:active{background:rgba(95,227,208,.22)}
+</style>
+
+<div id="stage"><canvas id="c"></canvas></div>
+<div id="pad"><div id="knob"></div></div>
+
+<div class="hud brand">
+  <h1>Islas de Aether</h1>
+  <p><span id="reg">Aether</span> · motor ASCII · sin texturas</p>
+</div>
+
+<div class="hud readout">
+  <div>Hora <b id="clk">00:00</b></div>
+  <div>Posición <b id="pos">0, 0</b></div>
+  <div>Altitud <b id="alt">0</b> m</div>
+  <div>Faros <b id="faros">0/6</b></div>
+  <div>Glifos <b id="gly">0</b></div>
+  <div>Sectores <b id="sec">0</b></div>
+  <div>Puntos <b id="pts">0k</b></div>
+</div>
+
+<div class="hud" id="alert">◈ un dragón te ha visto</div>
+<div class="hud hint" id="hint">espacio · encender el faro</div>
+<div class="hud hint" id="hint2">espacio · aterrizar</div>
+<div class="hud" id="toast"><span class="b"></span><span class="s"></span></div>
+
+<div class="hud keys">
+  <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> mover</span>
+  <span><kbd>Q</kbd><kbd>E</kbd> altura</span>
+  <span><kbd>arrastrar</kbd> mirar</span>
+  <span><kbd>⇧</kbd> impulso</span>
+  <span><kbd>espacio</kbd> aterrizar / actuar</span>
+  <span><kbd>F</kbd> volar</span>
+  <span><kbd>M</kbd> mapa</span>
+  <span><kbd>N</kbd> audio</span>
+  <span><kbd>1</kbd>–<kbd>6</kbd> viajar</span>
+  <span><kbd>T</kbd> hora</span>
+  <span><kbd>H</kbd> motor</span>
+</div>
+<div class="hud mode" id="mode">Gran tour</div>
+<div class="hud" id="snd"></div>
+
+<div id="tbtns">
+  <button id="bMapa">Mapa</button>
+  <button id="bAcc">Acción</button>
+  <button id="bSube">Subir</button>
+  <button id="bBaja">Bajar</button>
+</div>
+
+<div id="mapwrap" hidden>
+  <canvas id="map" width="900" height="900"></canvas>
+  <div id="mapfoot">M cerrar · 1–6 viajar a una región</div>
+</div>
+
+<div id="boot">
+  <h2>Islas de Aether</h2>
+  <p id="bootmsg">Levantando el archipiélago</p>
+  <div id="bar"><i></i></div>
+</div>
+
+<div id="engine" hidden>
+  <h2>Cómo se hace un mundo de caracteres</h2>
+  <p class="sub">Siete piezas y un hilo aparte</p>
+  <ol>
+    <li><div><strong>Nube de puntos, no polígonos.</strong> Cada punto lleva posición, normal, material y oclusión. Islas, quillas colgando, troncos, copas, agujas, casas huecas y puentes con catenaria salen de ruido con semilla.</div></li>
+    <li><div><strong>Proyección en perspectiva.</strong> Se rota a espacio de cámara y se divide entre la profundidad: <code>x/z</code>, <code>y/z</code>. Hay que corregir que la celda de texto es más alta que ancha, o todo sale estirado.</div></li>
+    <li><div><strong>Z-buffer por celda.</strong> Una rejilla paralela guarda la profundidad más cercana de cada celda. Eso es la oclusión: lo de delante tapa lo de detrás, sin ordenar nada.</div></li>
+    <li><div><strong>Luz de verdad, no horneada.</strong> Cada punto guarda su normal en tres bytes. El sombreado se calcula en cada fotograma contra la dirección del sol — o de la luna —, así que las laderas se encienden y se apagan según la hora, y el rebote del cielo llega por arriba. Encima va una oclusión ambiental precalculada con una rejilla de ocupación: los huecos y las grietas se oscurecen solos.</div></li>
+    <li><div><strong>Un mundo sin borde.</strong> No hay mapa fijo: el espacio se divide en sectores de 220 unidades y cada uno se genera cuando te acercas, a partir de <code>hash(sx, sz, semilla)</code>. Las seis regiones con nombre solo suben la densidad donde caen. Los sectores lejanos se desalojan. Con <code>?semilla=</code> en la URL cambias de mundo entero.</div></li>
+    <li><div><strong>Todo eso vive en un Worker.</strong> Generación y proyección corren fuera del hilo principal y devuelven la rejilla ya resuelta en buffers transferibles que van y vienen sin copiarse. El hilo principal solo pinta, suena y juega — por eso generar sectores nuevos no da tirones.</div></li>
+    <li><div><strong>Y se pinta en tiras.</strong> Cada fila agrupa celdas contiguas del mismo color en una cadena y se dibuja de un golpe: de ~10.000 celdas a unos cientos de llamadas.</div></li>
+  </ol>
+  <div class="close">Pulsa H para volver al vuelo</div>
+</div>
+
+<script type="javascript/worker" id="worldsrc">
+/* ================= NÚCLEO DEL MUNDO =================
+   Vive dentro de un Worker. Es dueño de la generación por sectores y del
+   bucle de proyección: el hilo principal solo recibe una rejilla ya resuelta
+   y la pinta. Todo lo que sale de aquí son buffers transferibles.        */
+var TAU = Math.PI * 2;
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+function mulberry(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hash2(x, z, seed) {
+  var h = Math.imul(x | 0, 374761393) ^ Math.imul(z | 0, 668265263) ^ Math.imul(seed | 0, 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (h ^ (h >>> 16)) | 0;
+}
+function relief(x, z) {
+  return Math.sin(x * 0.19) * Math.cos(z * 0.23) * 1.5 +
+         Math.sin(x * 0.07 + z * 0.11) * 2.4 +
+         Math.sin(z * 0.41 + x * 0.05) * 0.7;
+}
+
+var REGIONS = [], WILD = null, SEED = 1, SECTOR = 180, DENS = 0.52;
+var sectors = new Map();          // clave "sx,sz" -> sector
+var queue = [];                   // sectores pendientes de generar
+
+/* qué región manda en un punto del mapa: la más cercana dentro de su radio,
+   y si ninguna alcanza, los Confines */
+function regionAt(x, z) {
+  for (var i = 0; i < REGIONS.length; i++) {
+    var R = REGIONS[i];
+    if (Math.hypot(x - R.cx, z - R.cz) < R.span * 1.15) return i;
+  }
+  return -1;
+}
+function paramsFor(ri) { return ri < 0 ? WILD : REGIONS[ri]; }
+
+/* ---------- construcción de un sector ---------- */
+function buildSector(sx, sz) {
+  var key = sx + "," + sz;
+  var cx0 = sx * SECTOR, cz0 = sz * SECTOR;
+  var rnd = mulberry(hash2(sx, sz, SEED));
+
+  var P = { x: [], y: [], z: [], nx: [], ny: [], nz: [], m: [], a: [] };
+  var islands = [];
+
+  function add(x, y, z, ax, ay, az, m) {
+    var L = Math.hypot(ax, ay, az) || 1;
+    P.x.push(x); P.y.push(y); P.z.push(z);
+    P.nx.push(ax / L); P.ny.push(ay / L); P.nz.push(az / L);
+    P.m.push(m); P.a.push(1);
+  }
+
+  function surfaceNormal(x, z) {
+    var e = 0.6;
+    var nx = -(relief(x + e, z) - relief(x - e, z)) / (2 * e);
+    var nz = -(relief(x, z + e) - relief(x, z - e)) / (2 * e);
+    return [nx, 1, nz];
+  }
+
+  function flora(R, M0, x, z, base) {
+    var i, s, a, w;
+    if (R.flora === "shroom") {
+      var h = 2.6 + rnd() * 3.2, cr = 2.2 + rnd() * 2.0;
+      for (s = 0; s < h * 8; s++) {
+        a = rnd() * TAU; w = 0.45 * (1 - (s / (h * 8)) * 0.35);
+        add(x + Math.cos(a) * w, base + s / 8, z + Math.sin(a) * w, Math.cos(a), 0.2, Math.sin(a), M0 + 7);
+      }
+      for (s = 0; s < 150; s++) {
+        a = rnd() * TAU;
+        var r = cr * Math.sqrt(rnd());
+        var dome = Math.sqrt(Math.max(0, 1 - (r / cr) * (r / cr))) * 1.4;
+        add(x + Math.cos(a) * r, base + h + dome, z + Math.sin(a) * r, Math.cos(a) * 0.4, 1, Math.sin(a) * 0.4, M0 + 1);
+      }
+      for (s = 0; s < 5; s++)
+        add(x + (rnd() - .5) * 4, base + h + 1 + rnd() * 3.5, z + (rnd() - .5) * 4, 0, 1, 0, M0 + 3);
+      return;
+    }
+    var dead = R.flora === "dead";
+    var hh = (dead ? 5 : 3.4) + rnd() * (dead ? 4.5 : 3.6);
+    for (s = 0; s < hh * 5; s++) {
+      a = rnd() * TAU;
+      add(x + Math.cos(a) * .3, base + s / 5, z + Math.sin(a) * .3, Math.cos(a), 0.15, Math.sin(a), M0 + 7);
+    }
+    if (dead) {
+      for (var br = 0; br < 5; br++) {
+        var ba = rnd() * TAU, len = 1.6 + rnd() * 2.6, y0 = base + hh * (0.5 + rnd() * 0.45);
+        for (s = 0; s < len * 5; s++) {
+          var tt = s / (len * 5);
+          add(x + Math.cos(ba) * len * tt, y0 + tt * 1.5, z + Math.sin(ba) * len * tt, Math.cos(ba), 0.6, Math.sin(ba), M0 + 7);
+        }
+      }
+      for (s = 0; s < 8; s++)
+        add(x + (rnd() - .5) * 1.4, base + rnd() * 0.8, z + (rnd() - .5) * 1.4, 0, 1, 0, M0 + 2);
+      return;
+    }
+    var cr2 = 1.5 + rnd() * 1.3;
+    for (s = 0; s < 110; s++) {
+      var u = rnd() * TAU, v = Math.acos(2 * rnd() - 1), rq = cr2 * Math.pow(rnd(), 0.34);
+      var ox = Math.sin(v) * Math.cos(u) * rq, oy = Math.cos(v) * rq * 0.78, oz = Math.sin(v) * Math.sin(u) * rq;
+      add(x + ox, base + hh + oy, z + oz, ox, oy, oz, M0 + 1);
+    }
+  }
+
+  function island(ri, cx, cy, cz, Rr) {
+    var R = paramsFor(ri), M0 = (ri < 0 ? REGIONS.length : ri) * 8;
+    var i, j, s, a, x, z, y, n, tt, rr, w;
+    islands.push({ x: cx, y: cy, z: cz, r: Rr, depth: Rr * 1.9, reg: ri < 0 ? REGIONS.length : ri });
+
+    var rings = Math.max(10, Math.round(Rr * 4.6 * DENS));
+    for (i = 0; i < rings; i++) {
+      tt = (i + 0.5) / rings; rr = Rr * Math.sqrt(tt);
+      var count = Math.max(10, Math.round(rr * 17 * DENS));
+      for (j = 0; j < count; j++) {
+        a = (j / count) * TAU + rnd() * 0.25;
+        x = cx + Math.cos(a) * rr; z = cz + Math.sin(a) * rr;
+        var edge = rr / Rr;
+        y = cy + relief(x, z) * (1 - edge * 0.6) - edge * edge * 2.2;
+        var nn = surfaceNormal(x, z);
+        var rock = edge > 0.80 || rnd() < 0.10;
+        add(x, y, z, nn[0], nn[1], nn[2], M0 + (rock ? 0 : 1));
+      }
+    }
+    var under = Math.round(Rr * 170 * DENS);
+    for (i = 0; i < under; i++) {
+      tt = Math.pow(rnd(), 0.62);
+      rr = Rr * (1 - tt) * (0.92 + rnd() * 0.16); a = rnd() * TAU;
+      add(cx + Math.cos(a) * rr, cy - 1.2 - Math.pow(tt, 1.4) * (Rr * 1.7), cz + Math.sin(a) * rr,
+          Math.cos(a), -0.75 - tt, Math.sin(a), M0);
+    }
+    for (i = 0, n = Math.round(Rr * 0.55); i < n; i++) {
+      a = rnd() * TAU; rr = Rr * 0.78 * Math.sqrt(rnd());
+      x = cx + Math.cos(a) * rr; z = cz + Math.sin(a) * rr;
+      flora(R, M0, x, z, cy + relief(x, z) * 0.9);
+    }
+    for (i = 0, n = Math.round((R.spires || 0) * Rr / 14); i < n; i++) {
+      a = rnd() * TAU; rr = Rr * 0.5 * rnd();
+      x = cx + Math.cos(a) * rr; z = cz + Math.sin(a) * rr;
+      var base = cy + relief(x, z), h = 9 + rnd() * 12;
+      for (s = 0; s < h * 9; s++) {
+        tt = s / (h * 9); w = (1 - tt) * 1.5;
+        var aa = rnd() * TAU;
+        add(x + Math.cos(aa) * w, base + tt * h, z + Math.sin(aa) * w, Math.cos(aa), 0.35, Math.sin(aa), M0 + 2);
+      }
+    }
+    if (R.houses && Rr > 13) for (i = 0, n = Math.round(Rr / 3); i < n; i++) {
+      a = rnd() * TAU; rr = Rr * 0.55 * Math.sqrt(rnd());
+      var hx = cx + Math.cos(a) * rr, hz = cz + Math.sin(a) * rr, hb = cy + relief(hx, hz);
+      var bw = 1.6 + rnd() * 1.6, bd = 1.6 + rnd() * 1.6, bh = 2.4 + rnd() * 2.2;
+      for (s = 0; s < 190; s++) {
+        var face = (rnd() * 4) | 0, uu = rnd() - 0.5, vv = rnd(), ox, oz, fx = 0, fz = 0;
+        if (face === 0) { ox = uu * bw; oz = -bd / 2; fz = -1; }
+        else if (face === 1) { ox = uu * bw; oz = bd / 2; fz = 1; }
+        else if (face === 2) { ox = -bw / 2; oz = uu * bd; fx = -1; }
+        else { ox = bw / 2; oz = uu * bd; fx = 1; }
+        var win = vv > 0.28 && vv < 0.62 && rnd() < 0.22;
+        add(hx + ox, hb + vv * bh, hz + oz, fx, 0.12, fz, M0 + (win ? 3 : 7));
+      }
+      for (s = 0; s < 55; s++) {
+        var ru = rnd() - 0.5, rv = rnd();
+        add(hx + ru * bw, hb + bh + (0.5 - Math.abs(ru)) * 1.6 * rv, hz + (rnd() - 0.5) * bd,
+            ru > 0 ? 0.7 : -0.7, 0.7, 0, M0);
+      }
+    }
+    if (Rr > 11) for (i = 0, n = Math.round(Rr / 3); i < n; i++) {
+      a = (i / n) * TAU;
+      x = cx + Math.cos(a) * Rr * 0.9; z = cz + Math.sin(a) * Rr * 0.9;
+      var lb = cy + relief(x, z) - 1;
+      for (s = 0; s < 9; s++) add(x, lb + s * 0.35, z, Math.cos(a), 0.2, Math.sin(a), M0 + 7);
+      for (s = 0; s < 13; s++)
+        add(x + (rnd() - .5) * .7, lb + 3.5 + (rnd() - .5) * .7, z + (rnd() - .5) * .7, 0, 1, 0, M0 + 3);
+    }
+  }
+
+  /* cuántas islas caen en este sector: densidad alta dentro de una región,
+     dispersa en los Confines. El resultado depende solo de (sx, sz, semilla),
+     así que el mundo es el mismo cada vez que vuelves. */
+  var ri = regionAt(cx0 + SECTOR / 2, cz0 + SECTOR / 2);
+  var R0 = paramsFor(ri);
+  var howMany = ri >= 0 ? 2 + ((hash2(sx, sz, SEED + 7) >>> 3) % 3) : (rnd() < 0.8 ? 1 : 0);
+  for (var k = 0; k < howMany; k++) {
+    var ix = cx0 + rnd() * SECTOR, iz = cz0 + rnd() * SECTOR;
+    var kri = regionAt(ix, iz);
+    var KR = paramsFor(kri);
+    var size = KR.rMin + (KR.rMax - KR.rMin) * Math.pow(rnd(), 1.5);
+    var iy = (KR.cy !== undefined ? KR.cy : 0) + (rnd() - 0.5) * 40;
+    island(kri, ix, iy, iz, size);
+  }
+
+  /* puentes entre islas cercanas del mismo sector */
+  for (var b = 1; b < islands.length; b++) {
+    var A = islands[b - 1], B = islands[b];
+    var dx = B.x - A.x, dy = B.y - A.y, dz = B.z - A.z, L = Math.hypot(dx, dz);
+    if (L > 110 || rnd() < 0.4) continue;
+    var M0b = A.reg * 8;
+    var ax = A.x + (dx / L) * A.r * 0.95, az = A.z + (dz / L) * A.r * 0.95;
+    var bx = B.x - (dx / L) * B.r * 0.95, bz = B.z - (dz / L) * B.r * 0.95;
+    var nseg = Math.round(L * 6);
+    for (var q = 0; q <= nseg; q++) {
+      var t2 = q / nseg, sag = Math.sin(t2 * Math.PI) * (L * 0.10);
+      var px2 = ax + (bx - ax) * t2, pz2 = az + (bz - az) * t2, py2 = A.y + dy * t2 - sag;
+      for (var wq = -1; wq <= 1; wq++)
+        add(px2 + (dz / L) * wq * 0.5, py2, pz2 - (dx / L) * wq * 0.5, 0, 1, 0, M0b + 7);
+      if (q % 9 === 0) for (var s2 = 0; s2 < 4; s2++) add(px2, py2 + 0.4 + s2 * 0.5, pz2, 0, 1, 0, M0b + 7);
+    }
+  }
+
+  /* ---------- oclusión ambiental: rejilla de ocupación del sector ---------- */
+  var n = P.x.length;
+  if (n > 0) {
+    var GX = 2.2;
+    var minx = 1e9, miny = 1e9, minz = 1e9, maxx = -1e9, maxy = -1e9, maxz = -1e9;
+    for (var i2 = 0; i2 < n; i2++) {
+      if (P.x[i2] < minx) minx = P.x[i2]; if (P.x[i2] > maxx) maxx = P.x[i2];
+      if (P.y[i2] < miny) miny = P.y[i2]; if (P.y[i2] > maxy) maxy = P.y[i2];
+      if (P.z[i2] < minz) minz = P.z[i2]; if (P.z[i2] > maxz) maxz = P.z[i2];
+    }
+    var gw = Math.max(1, Math.ceil((maxx - minx) / GX) + 1);
+    var gh = Math.max(1, Math.ceil((maxy - miny) / GX) + 1);
+    var gd = Math.max(1, Math.ceil((maxz - minz) / GX) + 1);
+    if (gw * gh * gd < 6e6) {
+      var occ = new Uint8Array(gw * gh * gd);
+      var gi = new Int32Array(n);
+      for (var i3 = 0; i3 < n; i3++) {
+        var gx = ((P.x[i3] - minx) / GX) | 0, gy = ((P.y[i3] - miny) / GX) | 0, gz = ((P.z[i3] - minz) / GX) | 0;
+        var id = (gy * gd + gz) * gw + gx;
+        gi[i3] = id;
+        if (occ[id] < 255) occ[id]++;
+      }
+      for (var i4 = 0; i4 < n; i4++) {
+        var id2 = gi[i4];
+        var gy2 = (id2 / (gw * gd)) | 0, rem = id2 - gy2 * gw * gd, gz2 = (rem / gw) | 0, gx2 = rem - gz2 * gw;
+        var occupied = 0, total = 0;
+        for (var dy2 = -1; dy2 <= 1; dy2++) for (var dz2 = -1; dz2 <= 1; dz2++) for (var dx2 = -1; dx2 <= 1; dx2++) {
+          var ax2 = gx2 + dx2, ay2 = gy2 + dy2, az2 = gz2 + dz2;
+          if (ax2 < 0 || ay2 < 0 || az2 < 0 || ax2 >= gw || ay2 >= gh || az2 >= gd) continue;
+          total++;
+          if (occ[(ay2 * gd + az2) * gw + ax2] > 0) occupied++;
+        }
+        var ao = 1 - 0.62 * (total ? occupied / total : 0);
+        P.a[i4] = clamp(ao * 1.3, 0.42, 1);
+      }
+    }
+  }
+
+  /* ---------- empaquetar ---------- */
+  var QX = new Float32Array(n), QY = new Float32Array(n), QZ = new Float32Array(n);
+  var QN = new Int8Array(n * 3), QM = new Uint8Array(n), QA = new Uint8Array(n);
+  var bx0 = 1e9, by0 = 1e9, bz0 = 1e9, bx1 = -1e9, by1 = -1e9, bz1 = -1e9;
+  for (var i5 = 0; i5 < n; i5++) {
+    QX[i5] = P.x[i5]; QY[i5] = P.y[i5]; QZ[i5] = P.z[i5];
+    QN[i5 * 3] = (P.nx[i5] * 127) | 0; QN[i5 * 3 + 1] = (P.ny[i5] * 127) | 0; QN[i5 * 3 + 2] = (P.nz[i5] * 127) | 0;
+    QM[i5] = P.m[i5]; QA[i5] = (P.a[i5] * 255) | 0;
+    if (QX[i5] < bx0) bx0 = QX[i5]; if (QX[i5] > bx1) bx1 = QX[i5];
+    if (QY[i5] < by0) by0 = QY[i5]; if (QY[i5] > by1) by1 = QY[i5];
+    if (QZ[i5] < bz0) bz0 = QZ[i5]; if (QZ[i5] > bz1) bz1 = QZ[i5];
+  }
+  var sec = {
+    key: key, sx: sx, sz: sz, n: n, X: QX, Y: QY, Z: QZ, N: QN, M: QM, A: QA,
+    cx: (bx0 + bx1) / 2, cy: (by0 + by1) / 2, cz: (bz0 + bz1) / 2,
+    rad: n ? 0.5 * Math.hypot(bx1 - bx0, by1 - by0, bz1 - bz0) + 1 : 0,
+    islands: islands, used: 0
+  };
+  sectors.set(key, sec);
+  return sec;
+}
+
+/* ---------- qué sectores hacen falta alrededor de la cámara ---------- */
+function ensureSectors(camx, camz, far, tick) {
+  var r = Math.ceil((far + SECTOR) / SECTOR);
+  var csx = Math.floor(camx / SECTOR), csz = Math.floor(camz / SECTOR);
+  queue.length = 0;
+  for (var dz = -r; dz <= r; dz++) for (var dx = -r; dx <= r; dx++) {
+    var sx = csx + dx, sz = csz + dz;
+    var d = Math.hypot((sx + 0.5) * SECTOR - camx, (sz + 0.5) * SECTOR - camz);
+    if (d > far + SECTOR) continue;
+    var key = sx + "," + sz;
+    var s = sectors.get(key);
+    if (s) { s.used = tick; continue; }
+    queue.push([d, sx, sz]);
+  }
+  queue.sort(function (a, b) { return a[0] - b[0]; });
+  var budget = 2;                       // como mucho 2 sectores por fotograma
+  for (var i = 0; i < queue.length && budget > 0; i++) {
+    buildSector(queue[i][1], queue[i][2]).used = tick;
+    budget--;
+  }
+  // desalojar lo que ya no se usa
+  if (sectors.size > 90) {
+    var olds = [];
+    sectors.forEach(function (s2, k) { if (s2.used < tick - 30) olds.push([s2.used, k]); });
+    olds.sort(function (a, b) { return a[0] - b[0]; });
+    for (var j = 0; j < olds.length && sectors.size > 70; j++) sectors.delete(olds[j][1]);
+  }
+}
+
+/* ================= RENDER ================= */
+var tick = 0;
+function render(msg) {
+  tick++;
+  var cam = msg.cam, cols = msg.cols, rows = msg.rows;
+  var z = msg.z, m = msg.m, s = msg.s;
+  var far = msg.far, focal = msg.focal, focalY = msg.focalY;
+  var mul = msg.mul, emissive = msg.emissive, sun = msg.sun, amb = msg.amb, skyLight = msg.skyLight;
+  var cy_ = Math.cos(msg.yaw), sy_ = Math.sin(msg.yaw);
+  var cp_ = Math.cos(msg.pitch), sp_ = Math.sin(msg.pitch);
+  var fwd = [sy_ * cp_, sp_, cy_ * cp_];
+  var halfC = cols / 2, halfR = rows / 2, halfFov = msg.halfFov;
+  var SHADES = 10;
+
+  ensureSectors(cam[0], cam[2], far, tick);
+
+  z.fill(0); s.fill(0);
+
+  var visible = 0, touched = 0, live = 0;
+  var isl = [];
+  sectors.forEach(function (sec) {
+    live += sec.n;
+    for (var q = 0; q < sec.islands.length; q++) {
+      var I = sec.islands[q];
+      if (Math.abs(I.x - cam[0]) < 900 && Math.abs(I.z - cam[2]) < 900) isl.push(I);
+    }
+    if (!sec.n) return;
+    var dx = sec.cx - cam[0], dy = sec.cy - cam[1], dz = sec.cz - cam[2];
+    var dist = Math.hypot(dx, dy, dz), cr = sec.rad;
+    if (dist - cr > far) return;
+    if (dist > cr) {
+      var cosang = (dx * fwd[0] + dy * fwd[1] + dz * fwd[2]) / dist;
+      if (Math.acos(clamp(cosang, -1, 1)) - Math.asin(clamp(cr / dist, 0, 1)) > halfFov) return;
+    }
+    visible++;
+    var near = dist - cr;
+    var stride = near < 210 ? 1 : near < 340 ? 2 : near < 460 ? 4 : 8;
+    var X = sec.X, Y = sec.Y, Z = sec.Z, NN = sec.N, MM = sec.M, AA = sec.A, n = sec.n;
+    for (var i = 0; i < n; i += stride) {
+      var rx = X[i] - cam[0], ry = Y[i] - cam[1], rz = Z[i] - cam[2];
+      var ex = rx * cy_ - rz * sy_;
+      var e0 = rx * sy_ + rz * cy_;
+      var ey = ry * cp_ - e0 * sp_;
+      var ez = ry * sp_ + e0 * cp_;
+      if (ez < 0.8 || ez > far) continue;
+      var inv = 1 / ez;
+      var px = (halfC + ex * focal * inv) | 0;
+      if (px < 0 || px >= cols) continue;
+      var py = (halfR - ey * focalY * inv) | 0;
+      if (py < 0 || py >= rows) continue;
+      var k = py * cols + px;
+      if (z[k] !== 0 && ez >= z[k]) continue;
+      var mat = MM[i];
+      var br;
+      if (emissive[mat]) {
+        br = mul[mat];
+      } else {
+        var d = (NN[i*3] * sun[0] + NN[i*3+1] * sun[1] + NN[i*3+2] * sun[2]) / 127;
+        var lam = d > 0 ? d : 0;
+        var sky = 0.5 + 0.5 * (NN[i*3+1] / 127);      // rebote del cielo, por arriba
+        var ao = AA[i] / 255;
+        br = mul[mat] * (amb * sky * ao + skyLight * lam * (0.35 + 0.65 * ao));
+      }
+      var f = 1 - ez / far;
+      br *= (0.26 + 0.74 * f * f) * (0.52 + 0.48 * f);
+      if (br <= 0.035) continue;
+      var sh = (br * SHADES) | 0;
+      if (sh > SHADES - 1) sh = SHADES - 1;
+      z[k] = ez; m[k] = mat; s[k] = sh + 1;
+      touched++;
+    }
+  });
+
+  var flat = new Float32Array(isl.length * 5);
+  for (var a = 0; a < isl.length; a++) {
+    flat[a*5] = isl[a].x; flat[a*5+1] = isl[a].y; flat[a*5+2] = isl[a].z;
+    flat[a*5+3] = isl[a].r; flat[a*5+4] = isl[a].reg;
+  }
+  self.postMessage({ t: "g", z: z, m: m, s: s, isl: flat,
+    stats: { sectors: sectors.size, visible: visible, live: live, touched: touched } },
+    [z.buffer, m.buffer, s.buffer, flat.buffer]);
+}
+
+self.onmessage = function (e) {
+  var d = e.data;
+  if (d.t === "init") { REGIONS = d.regions; WILD = d.wild; SEED = d.seed; sectors.clear(); return; }
+  if (d.t === "seed") { SEED = d.seed; sectors.clear(); return; }
+  if (d.t === "f") render(d);
+};
+</script>
+
+<script>
+(() => {
+  "use strict";
+  const TAU = Math.PI * 2;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const coarse = matchMedia("(pointer: coarse)").matches;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const mix = (a, b, t) => a + (b - a) * t;
+  const $ = id => document.getElementById(id);
+
+  /* ================= REGIONES ================= */
+  const REGIONS = [
+    { name:"Aether", sub:"islas de cristal y musgo", cx:0, cz:0, cy:0, span:170, rMin:9, rMax:30,
+      flora:"tree", houses:true, spires:2, glow:{2:0.55},
+      skyNight:[4,6,13], skyDay:[16,40,62],
+      mats:[[126,122,158],[99,196,141],[111,230,218],[242,180,92],[143,211,244],[226,88,91],[201,212,242],[168,122,90]] },
+    { name:"Cenizas", sub:"el archipiélago quemado", cx:620, cz:-280, cy:-10, span:160, rMin:8, rMax:26,
+      flora:"dead", houses:true, spires:3, glow:{2:0.95,4:0.75},
+      skyNight:[11,5,4], skyDay:[46,20,12],
+      mats:[[122,104,96],[148,110,84],[255,122,58],[255,206,138],[255,96,40],[255,196,140],[216,196,188],[92,72,64]] },
+    { name:"Coral", sub:"el arrecife suspendido", cx:-180, cz:620, cy:-25, span:160, rMin:8, rMax:25,
+      flora:"shroom", houses:false, spires:4, glow:{1:0.42,2:0.65,4:0.35},
+      skyNight:[6,3,20], skyDay:[40,26,68],
+      mats:[[124,118,168],[255,143,184],[111,230,218],[255,224,138],[168,240,224],[185,140,255],[232,220,255],[208,160,196]] },
+    { name:"Escarcha", sub:"las cumbres calladas", cx:-640, cz:-340, cy:32, span:158, rMin:8, rMax:25,
+      flora:"tree", houses:true, spires:3, glow:{2:0.7},
+      skyNight:[6,10,18], skyDay:[38,58,80],
+      mats:[[150,164,192],[206,232,248],[140,220,255],[255,232,180],[190,230,255],[120,200,255],[226,238,255],[118,130,158]] },
+    { name:"Dunas", sub:"el mar de arena alta", cx:500, cz:500, cy:12, span:160, rMin:9, rMax:27,
+      flora:"dead", houses:true, spires:1, glow:{2:0.5,3:0.4},
+      skyNight:[13,9,6], skyDay:[62,46,26],
+      mats:[[198,168,116],[188,196,110],[255,200,110],[255,224,152],[230,206,150],[255,180,90],[240,228,200],[150,116,72]] },
+    { name:"Abismo", sub:"lo que quedó debajo", cx:-700, cz:250, cy:-62, span:155, rMin:7, rMax:23,
+      flora:"shroom", houses:false, spires:4, glow:{1:0.85,2:0.9,4:0.45},
+      skyNight:[2,4,8], skyDay:[8,16,26],
+      mats:[[70,74,104],[90,255,214],[130,120,255],[180,255,240],[110,200,255],[200,120,255],[190,200,240],[58,60,86]] }
+  ];
+  const WILD = { name:"Confines", sub:"lo que nadie cartografió", cy:0, rMin:7, rMax:22,
+    flora:"tree", houses:false, spires:1, glow:{2:0.6},
+    skyNight:[5,6,11], skyDay:[24,34,48],
+    mats:[[110,110,132],[132,168,140],[150,200,220],[236,206,150],[160,196,216],[220,150,150],[210,216,236],[120,104,88]] };
+  const NREG = REGIONS.length;
+  const PAL = REGIONS.concat([WILD]);
+  const REGN = PAL.length;
+
+  const RAMPS = [".,:;-=+*#@", ".,'\"^:*%#@", ".:*^iIVW#@", ".:*oO0#8%@", ".:;|!Ii#H@", ".:~=xX%#@@", "....::;;**", ".,:;|=+#%@"];
+  const STAR = REGN * 8, SUN = STAR + 1, NMAT = SUN + 1, SHADES = 10;
+  const COLORS = new Array(NMAT * SHADES), CHARS = new Array(NMAT * SHADES);
+  for (let m = 0; m < NMAT; m++) {
+    const ramp = m === STAR ? "....::;;**" : m === SUN ? ".:*oO0#8%@" : RAMPS[m % 8];
+    for (let s = 0; s < SHADES; s++) CHARS[m * SHADES + s] = ramp[s];
+  }
+  const MUL = new Float32Array(NMAT).fill(1);
+  const EMI = new Uint8Array(NMAT);
+  for (let r = 0; r < REGN; r++) { EMI[r * 8 + 2] = 1; EMI[r * 8 + 3] = 1; }
+  EMI[STAR] = 1; EMI[SUN] = 1;
+
+  const relief = (x, z) =>
+    Math.sin(x * 0.19) * Math.cos(z * 0.23) * 1.5 +
+    Math.sin(x * 0.07 + z * 0.11) * 2.4 +
+    Math.sin(z * 0.41 + x * 0.05) * 0.7;
+
+  /* ================= WORKER ================= */
+  const SRC = $("worldsrc").textContent;
+  let worker = null, inlineMode = false;
+  try {
+    worker = new Worker(URL.createObjectURL(new Blob([SRC], { type: "text/javascript" })));
+  } catch (err) { worker = null; }
+  if (!worker) {                                   // sin Worker: mismo código en el hilo principal
+    inlineMode = true;
+    const scope = { postMessage: (msg) => { if (fake.onmessage) fake.onmessage({ data: msg }); } };
+    new Function("self", SRC)(scope);
+    var fake = { postMessage: (msg) => scope.onmessage({ data: msg }), onmessage: null };
+    worker = fake;
+  }
+  const SEED0 = (() => {
+    const q = new URLSearchParams(location.search).get("semilla");
+    return q ? (parseInt(q, 36) || 20260903) : 20260903;
+  })();
+  worker.postMessage({ t: "init", regions: REGIONS, wild: WILD, seed: SEED0 });
+
+  /* ================= REJILLA ================= */
+  const canvas = $("c");
+  const ctx = canvas.getContext("2d", { alpha: false });
+  let cols = 0, rows = 0, cellW = 8, cellH = 13, focal = 1, focalY = 1, fs = 12, halfFov = 0.9;
+  const FAR = 560;
+  let bufs = [], cur = null, free = null, pending = false;
+  let islandsFlat = new Float32Array(0), stats = { sectors: 0, visible: 0, live: 0, touched: 0 };
+
+  function makeSet() {
+    return { z: new Float32Array(cols * rows), m: new Uint8Array(cols * rows), s: new Uint8Array(cols * rows) };
+  }
+  function resize() {
+    const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fs = coarse ? clamp(w / 58, 9, 16) : clamp(w / 104, 8, 15);
+    ctx.font = '500 ' + fs.toFixed(2) + 'px "IBM Plex Mono", ui-monospace, monospace';
+    ctx.textBaseline = "top";
+    cellW = ctx.measureText("M").width || fs * 0.6;
+    cellH = fs * 1.06;
+    cols = Math.max(20, Math.floor(w / cellW));
+    rows = Math.max(12, Math.floor(h / cellH));
+    focal = (cols / 2) / Math.tan(0.55);
+    focalY = focal * (cellW / cellH);
+    halfFov = Math.atan(Math.hypot(Math.tan(0.55), (rows / 2) / focalY)) + 0.14;
+    cur = makeSet(); free = makeSet(); pending = false;
+  }
+  addEventListener("resize", resize);
+
+  worker.onmessage = (e) => {
+    const d = e.data;
+    if (d.t !== "g") return;
+    if (d.z.length !== cols * rows) { pending = false; return; }   // llegó de un tamaño viejo
+    free = cur;
+    cur = { z: d.z, m: d.m, s: d.s };
+    islandsFlat = d.isl; stats = d.stats;
+    pending = false;
+  };
+
+  /* ================= ESTADO ================= */
+  const cam = { x: 0, y: 26, z: -120, yaw: 0, pitch: -0.13 };
+  let auto = true, lastInput = -1e9, t = 0, dt = 0.016;
+  let dayPhase = 0.70; const dayRate = 1 / 190;
+  const keys = Object.create(null);
+  let mode = "fly", vy = 0, ground = null;
+  let mapOpen = false, tour = 0, tourT = 0, toastTimer = 0, tourTarget = null;
+  let cy_ = 1, sy_ = 0, cp_ = 1, sp_ = 0, halfC = 0, halfR = 0, drawn = 0;
+  let sunDirG = [0, 1, 0], starFade = 0;
+
+  const beacons = REGIONS.map((R, i) => ({ i, x: R.cx, y: R.cy + 8, z: R.cz, lit: false, glow: 0, reg: i, placed: false }));
+  /* la isla más grande cerca de un punto: sirve para posar faros y para que el
+     gran tour mire a algo que existe, no al centro abstracto de la región */
+  function bigIslandNear(x, z, radius) {
+    let best = null, bestR = 0;
+    for (let i = 0; i < islandsFlat.length; i += 5) {
+      const ix = islandsFlat[i], iz = islandsFlat[i+2], ir = islandsFlat[i+3];
+      if (Math.hypot(ix - x, iz - z) > radius) continue;
+      if (ir > bestR) { bestR = ir; best = { x: ix, y: islandsFlat[i+1], z: iz, r: ir }; }
+    }
+    return best;
+  }
+  let litCount = 0;
+
+  function toast(big, small) {
+    const el = $("toast");
+    el.querySelector(".b").textContent = big;
+    el.querySelector(".s").textContent = small;
+    el.classList.add("on"); toastTimer = 1.9;
+  }
+  function travel(i) {
+    const R = REGIONS[i];
+    const T = bigIslandNear(R.cx, R.cz, 220);
+    const bx = T ? T.x : R.cx, by = T ? T.y : R.cy, bz = T ? T.z : R.cz;
+    cam.x = bx - 85; cam.y = by + 34; cam.z = bz - 85;
+    cam.yaw = Math.atan2(85, 85); cam.pitch = -0.2;
+    mode = "fly"; auto = false; lastInput = t;
+    toast(R.name, R.sub);
+  }
+
+  /* ---------- islas cercanas (llegan del worker) ---------- */
+  function islandAt(x, z) {
+    let best = null, bestY = -1e9;
+    for (let i = 0; i < islandsFlat.length; i += 5) {
+      const ix = islandsFlat[i], iy = islandsFlat[i+1], iz = islandsFlat[i+2], ir = islandsFlat[i+3];
+      const d = Math.hypot(x - ix, z - iz);
+      if (d > ir * 0.97) continue;
+      const edge = d / ir;
+      const y = iy + relief(x, z) * (1 - edge * 0.6) - edge * edge * 2.2;
+      if (y > bestY) { bestY = y; best = { x: ix, y: iy, z: iz, r: ir, top: y }; }
+    }
+    return best;
+  }
+  function collide(p) {
+    for (let i = 0; i < islandsFlat.length; i += 5) {
+      const ix = islandsFlat[i], iy = islandsFlat[i+1], iz = islandsFlat[i+2], ir = islandsFlat[i+3];
+      const dx = p.x - ix, dz = p.z - iz;
+      if (dx * dx + dz * dz > (ir + 4) * (ir + 4)) continue;
+      const d = Math.hypot(dx, dz);
+      if (p.y < iy + 4 && p.y > iy - ir * 1.9 - 4) {
+        const push = ir + 2.5 - d;
+        if (push > 0) { if (d > 0.001) { p.x += (dx / d) * push; p.z += (dz / d) * push; } else p.x += push; }
+      }
+    }
+  }
+
+  /* ================= AUDIO PROCEDURAL ================= */
+  const audio = { on: false, ctx: null, master: null, wind: null, windF: null, water: null, drone: [], droneG: null };
+  function noiseBuffer(ac) {
+    const b = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+  function startAudio() {
+    if (audio.ctx) { audio.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ac = new AC();
+    audio.ctx = ac;
+    audio.master = ac.createGain(); audio.master.gain.value = 0.0; audio.master.connect(ac.destination);
+    const nb = noiseBuffer(ac);
+
+    const w = ac.createBufferSource(); w.buffer = nb; w.loop = true;
+    const wf = ac.createBiquadFilter(); wf.type = "bandpass"; wf.frequency.value = 480; wf.Q.value = 0.7;
+    const wg = ac.createGain(); wg.gain.value = 0.5;
+    w.connect(wf); wf.connect(wg); wg.connect(audio.master); w.start();
+    audio.wind = wg; audio.windF = wf;
+
+    const wa = ac.createBufferSource(); wa.buffer = nb; wa.loop = true;
+    const wal = ac.createBiquadFilter(); wal.type = "lowpass"; wal.frequency.value = 900;
+    const wag = ac.createGain(); wag.gain.value = 0;
+    wa.connect(wal); wal.connect(wag); wag.connect(audio.master); wa.start();
+    audio.water = wag;
+
+    audio.droneG = ac.createGain(); audio.droneG.gain.value = 0.10; audio.droneG.connect(audio.master);
+    for (let i = 0; i < 2; i++) {
+      const o = ac.createOscillator(); o.type = "sine"; o.frequency.value = 55 + i * 0.6;
+      o.connect(audio.droneG); o.start(); audio.drone.push(o);
+    }
+    audio.on = true;
+    audio.master.gain.linearRampToValueAtTime(0.5, ac.currentTime + 1.2);
+    $("snd").classList.add("on");
+  }
+  function toggleAudio() {
+    if (!audio.ctx) { startAudio(); return; }
+    audio.on = !audio.on;
+    audio.master.gain.linearRampToValueAtTime(audio.on ? 0.5 : 0, audio.ctx.currentTime + 0.4);
+    $("snd").classList.toggle("on", audio.on);
+  }
+  function roar(pitch) {
+    if (!audio.ctx || !audio.on) return;
+    const ac = audio.ctx, o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+    o.type = "sawtooth"; f.type = "lowpass"; f.frequency.value = 700;
+    o.frequency.setValueAtTime(120 * pitch, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(48 * pitch, ac.currentTime + 0.9);
+    g.gain.setValueAtTime(0.0001, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.5, ac.currentTime + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 1.1);
+    o.connect(f); f.connect(g); g.connect(audio.master); o.start(); o.stop(ac.currentTime + 1.2);
+  }
+  function chime() {
+    if (!audio.ctx || !audio.on) return;
+    const ac = audio.ctx;
+    [523.25, 659.25, 783.99].forEach((fq, i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = "triangle"; o.frequency.value = fq;
+      g.gain.setValueAtTime(0.0001, ac.currentTime + i * 0.09);
+      g.gain.exponentialRampToValueAtTime(0.25, ac.currentTime + i * 0.09 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + i * 0.09 + 1.4);
+      o.connect(g); g.connect(audio.master); o.start(ac.currentTime + i * 0.09); o.stop(ac.currentTime + i * 0.09 + 1.5);
+    });
+  }
+
+  /* ================= ACCIONES ================= */
+  function action() {
+    const b = nearBeacon();
+    if (b && !b.lit) {
+      b.lit = true; litCount++;
+      chime();
+      toast("Faro encendido", litCount + " de " + REGIONS.length + " · " + REGIONS[b.reg].name);
+      return;
+    }
+    if (mode === "fly") {
+      const g = landingSpot();
+      if (g) {
+        mode = "walk"; vy = 0;
+        cam.x = g.x; cam.z = g.z; cam.y = g.top + 1.8;
+        cam.pitch = clamp(cam.pitch, -0.5, 0.5);
+        toast("En tierra", "espacio para saltar · F para volar");
+      } else toast("Demasiado lejos", "acércate al suelo de una isla");
+    } else {
+      if (vy === 0) vy = 7.5;
+    }
+  }
+  /* dónde se puede posar: justo debajo, o el borde de la isla más cercana.
+     Aterrizar tiene que perdonar la puntería o nadie lo encuentra. */
+  function landingSpot() {
+    const under = islandAt(cam.x, cam.z);
+    if (under && cam.y - under.top < 26 && cam.y > under.top - 4)
+      return { x: cam.x, z: cam.z, top: under.top };
+    let best = null, bd = 1e9;
+    for (let i = 0; i < islandsFlat.length; i += 5) {
+      const ix = islandsFlat[i], iy = islandsFlat[i+1], iz = islandsFlat[i+2], ir = islandsFlat[i+3];
+      const d = Math.hypot(cam.x - ix, cam.z - iz);
+      if (d > ir + 55 || d < 0.01) continue;
+      const px = ix + (cam.x - ix) / d * Math.min(d, ir * 0.72);
+      const pz = iz + (cam.z - iz) / d * Math.min(d, ir * 0.72);
+      const edge = Math.min(1, Math.hypot(px - ix, pz - iz) / ir);
+      const top = iy + relief(px, pz) * (1 - edge * 0.6) - edge * edge * 2.2;
+      const drop = cam.y - top;
+      if (drop > 34 || drop < -8) continue;
+      if (d < bd) { bd = d; best = { x: px, z: pz, top }; }
+    }
+    return best;
+  }
+  function nearBeacon() {
+    let best = null, bd = 24;
+    for (const b of beacons) {
+      const d = Math.hypot(b.x - cam.x, b.y + 10 - cam.y, b.z - cam.z);
+      if (d < bd) { bd = d; best = b; }
+    }
+    return best;
+  }
+
+  /* ================= ENTRADA ================= */
+  addEventListener("keydown", e => {
+    const k = e.key.toLowerCase();
+    if (k === "h") { $("engine").hidden = !$("engine").hidden; e.preventDefault(); return; }
+    if (k === "m") { mapOpen = !mapOpen; $("mapwrap").hidden = !mapOpen; e.preventDefault(); return; }
+    if (k === "n") { toggleAudio(); e.preventDefault(); return; }
+    if (k === "escape") { $("engine").hidden = true; $("mapwrap").hidden = true; mapOpen = false; return; }
+    if (k === "t") { dayPhase = (dayPhase + 0.25) % 1; e.preventDefault(); return; }
+    if (k === "f") { if (mode === "walk") { mode = "fly"; toast("Al aire", ""); } auto = false; lastInput = t; e.preventDefault(); return; }
+    if (k === " ") { action(); auto = false; lastInput = t; e.preventDefault(); return; }
+    if (k >= "1" && k <= "6") { const i = +k - 1; if (i < NREG) { travel(i); mapOpen = false; $("mapwrap").hidden = true; } e.preventDefault(); return; }
+    keys[k] = true;
+    if ("wasdqe".includes(k) || k === "shift") { auto = false; lastInput = t; e.preventDefault(); }
+  });
+  addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+  addEventListener("pointerdown", startAudio, { once: true });
+  addEventListener("keydown", startAudio, { once: true });
+
+  /* ratón: arrastrar para mirar */
+  const stage = $("stage");
+  let drag = null;
+  stage.addEventListener("pointerdown", e => {
+    if (e.pointerType === "touch") return;
+    drag = { x: e.clientX, y: e.clientY }; auto = false; lastInput = t;
+    stage.classList.add("dragging"); stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", e => {
+    if (!drag || e.pointerType === "touch") return;
+    cam.yaw -= (e.clientX - drag.x) * 0.0042;
+    cam.pitch = clamp(cam.pitch + (e.clientY - drag.y) * 0.0035, -1.35, 1.35);
+    drag = { x: e.clientX, y: e.clientY }; lastInput = t;
+  });
+  const endDrag = () => { drag = null; stage.classList.remove("dragging"); };
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+
+  /* táctil: joystick izquierdo, mirada derecha */
+  const stick = { active: false, id: -1, ox: 0, oy: 0, dx: 0, dy: 0 };
+  const look = { id: -1, x: 0, y: 0 };
+  if (coarse) {
+    document.body.classList.add("touch");
+    const knob = $("knob"), pad = $("pad");
+    stage.addEventListener("touchstart", e => {
+      auto = false; lastInput = t; startAudio();
+      for (const tp of e.changedTouches) {
+        if (tp.clientX < innerWidth * 0.45 && !stick.active) {
+          stick.active = true; stick.id = tp.identifier; stick.ox = tp.clientX; stick.oy = tp.clientY;
+          pad.style.left = tp.clientX + "px"; pad.style.top = tp.clientY + "px"; pad.classList.add("on");
+        } else if (look.id === -1) { look.id = tp.identifier; look.x = tp.clientX; look.y = tp.clientY; }
+      }
+      e.preventDefault();
+    }, { passive: false });
+    stage.addEventListener("touchmove", e => {
+      for (const tp of e.changedTouches) {
+        if (tp.identifier === stick.id) {
+          const dx = clamp((tp.clientX - stick.ox) / 52, -1, 1), dy = clamp((tp.clientY - stick.oy) / 52, -1, 1);
+          stick.dx = dx; stick.dy = dy;
+          knob.style.transform = "translate(" + (dx * 26 - 22) + "px," + (dy * 26 - 22) + "px)";
+        } else if (tp.identifier === look.id) {
+          cam.yaw -= (tp.clientX - look.x) * 0.006;
+          cam.pitch = clamp(cam.pitch + (tp.clientY - look.y) * 0.005, -1.35, 1.35);
+          look.x = tp.clientX; look.y = tp.clientY; lastInput = t;
+        }
+      }
+      e.preventDefault();
+    }, { passive: false });
+    const endTouch = e => {
+      for (const tp of e.changedTouches) {
+        if (tp.identifier === stick.id) { stick.active = false; stick.id = -1; stick.dx = stick.dy = 0; pad.classList.remove("on"); }
+        if (tp.identifier === look.id) look.id = -1;
+      }
+    };
+    stage.addEventListener("touchend", endTouch);
+    stage.addEventListener("touchcancel", endTouch);
+    $("bMapa").addEventListener("click", () => { mapOpen = !mapOpen; $("mapwrap").hidden = !mapOpen; });
+    $("bAcc").addEventListener("click", () => { startAudio(); action(); });
+    $("bSube").addEventListener("touchstart", () => keys["e"] = true, { passive: true });
+    $("bSube").addEventListener("touchend", () => keys["e"] = false);
+    $("bBaja").addEventListener("touchstart", () => keys["q"] = true, { passive: true });
+    $("bBaja").addEventListener("touchend", () => keys["q"] = false);
+  }
+  $("mapwrap").addEventListener("click", e => { if (e.target.id === "mapwrap") { mapOpen = false; $("mapwrap").hidden = true; } });
+
+  /* ================= DINÁMICOS ================= */
+  const DISC = [];
+  for (let i = 0; i < 260; i++) { const a = Math.random() * TAU, r = Math.sqrt(Math.random()); DISC.push([Math.cos(a) * r, Math.sin(a) * r, 1 - r * 0.55]); }
+  const NSTAR = 2200;
+  const SXa = new Float32Array(NSTAR), SYa = new Float32Array(NSTAR), SZa = new Float32Array(NSTAR), SBa = new Float32Array(NSTAR);
+  (() => {
+    let s = 31337;
+    const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+    for (let i = 0; i < NSTAR; i++) {
+      const u = rnd() * TAU, v = Math.acos(2 * rnd() - 1), R = 1600;
+      SXa[i] = Math.sin(v) * Math.cos(u) * R; SYa[i] = Math.cos(v) * R * 0.7 + 120; SZa[i] = Math.sin(v) * Math.sin(u) * R;
+      SBa[i] = 0.2 + Math.pow(rnd(), 3) * 0.8;
+    }
+  })();
+
+  const FALLS = [];
+  for (let i = 0; i < 520; i++) FALLS.push({ src: -1, ang: Math.random() * TAU, jx: (Math.random() - .5) * 2.4, jz: (Math.random() - .5) * 2.4, t: Math.random() * 46, v: 7 + Math.random() * 5, life: 40 + Math.random() * 24 });
+  let fallSrc = [];
+  let nearestFall = 1e9;
+
+  const dragons = [];
+  for (let i = 0; i < NREG; i++) {
+    const R = REGIONS[i];
+    dragons.push({ home:[R.cx - 30, R.cy + 26, R.cz + 20], R:52, sp:0.4, a:i*1.3, bob:7,
+      p:[R.cx, R.cy + 26, R.cz], hist:[], alert:0, was:0, mat:i*8+5, lamp:i*8+3 });
+  }
+
+  function plot(set, x, y, z, m, b) {
+    const rx = x - cam.x, ry = y - cam.y, rz = z - cam.z;
+    const ex = rx * cy_ - rz * sy_;
+    const e0 = rx * sy_ + rz * cy_;
+    const ey = ry * cp_ - e0 * sp_;
+    const ez = ry * sp_ + e0 * cp_;
+    if (ez < 0.8) return;
+    const inv = 1 / ez;
+    const px = (halfC + ex * focal * inv) | 0;
+    if (px < 0 || px >= cols) return;
+    const py = (halfR - ey * focalY * inv) | 0;
+    if (py < 0 || py >= rows) return;
+    const i = py * cols + px;
+    if (set.z[i] !== 0 && ez >= set.z[i]) return;
+    let br = b;
+    if (m !== STAR && m !== SUN) {
+      if (ez > FAR) return;
+      const f = 1 - ez / FAR;
+      br *= (0.26 + 0.74 * f * f) * (0.52 + 0.48 * f);
+    }
+    if (br <= 0.035) return;
+    set.z[i] = ez; set.m[i] = m; set.s[i] = Math.min(SHADES - 1, (br * SHADES) | 0) + 1;
+  }
+
+  /* ================= BUCLE ================= */
+  let prev = 0;
+  function frame(ms) {
+    const now = ms / 1000;
+    dt = prev ? clamp(now - prev, 0.001, 0.1) : 0.016;
+    prev = now; t = now;
+
+    /* --- hora, luz --- */
+    dayPhase = (dayPhase + dt * dayRate * (reduced ? 0.4 : 1)) % 1;
+    const sunEl = Math.sin(dayPhase * TAU), horiz = Math.cos(dayPhase * TAU), az = 0.9;
+    const sunDir = [horiz * Math.sin(az), sunEl, horiz * Math.cos(az)];
+    sunDirG = sunDir;
+    const day = clamp(sunEl * 1.7 + 0.32, 0, 1), night = 1 - day;
+    const dusk = Math.max(0, 1 - Math.abs(sunEl) * 3.2);
+    const lightDir = sunEl > 0 ? sunDir : [-sunDir[0], -sunDir[1], -sunDir[2]];
+    const amb = 0.62 + 0.30 * day;
+    const skyLight = 0.90 * day + 0.35 * night;
+    starFade = clamp(night * 1.5 - 0.15, 0, 1);
+
+    /* --- región y cielo --- */
+    let nearest = -1, nd = 1e9;
+    const Wt = new Float64Array(REGN);
+    let wsum = 0;
+    for (let i = 0; i < NREG; i++) {
+      const R = REGIONS[i], d = Math.hypot(cam.x - R.cx, cam.z - R.cz);
+      if (d < nd) { nd = d; nearest = i; }
+      Wt[i] = 1 / (Math.pow(Math.max(d, 60), 2.2) + 1); wsum += Wt[i];
+    }
+    Wt[NREG] = 1 / (Math.pow(320, 2.2) + 1); wsum += Wt[NREG];      // los Confines de fondo
+    if (nd > REGIONS[Math.max(nearest,0)].span * 1.15) nearest = NREG;
+    const sky = [0, 0, 0];
+    for (let i = 0; i < REGN; i++) {
+      const w = Wt[i] / wsum, R = PAL[i];
+      for (let k = 0; k < 3; k++) sky[k] += w * mix(R.skyNight[k], R.skyDay[k], day);
+    }
+    for (let k = 0; k < 3; k++) sky[k] += dusk * [26, 10, 4][k];
+
+    /* --- paleta --- */
+    const tint = [mix(0.72, 1, day) + dusk * 0.30, mix(0.80, 1, day) + dusk * 0.05, mix(1.06, 1, day) - dusk * 0.16];
+    for (let r = 0; r < REGN; r++) {
+      const G = PAL[r].glow || {}, o = r * 8;
+      for (let k = 0; k < 8; k++) MUL[o + k] = 1;
+      MUL[o + 2] = 0.55 + 0.55 * night;
+      MUL[o + 3] = 0.30 + 0.70 * night;
+      for (const gm in G) { const idx = o + (+gm); if (EMI[idx]) MUL[idx] = clamp(0.35 + G[gm] * night + 0.3 * day, 0, 1.15); }
+    }
+    MUL[STAR] = starFade; MUL[SUN] = 1;
+    if (!frame.n || frame.n % 3 === 0) {
+      for (let m = 0; m < NMAT; m++) {
+        const base = m === SUN ? (sunEl > -0.05 ? [255, 232, 190] : [206, 220, 255])
+                   : m === STAR ? [214, 224, 248] : PAL[(m / 8) | 0].mats[m % 8];
+        for (let s = 0; s < SHADES; s++) {
+          const k = 0.36 + 0.64 * (s / (SHADES - 1));
+          COLORS[m * SHADES + s] = "rgb(" +
+            clamp(Math.round(base[0] * k * tint[0]), 0, 255) + "," +
+            clamp(Math.round(base[1] * k * tint[1]), 0, 255) + "," +
+            clamp(Math.round(base[2] * k * tint[2]), 0, 255) + ")";
+        }
+      }
+    }
+
+    cy_ = Math.cos(cam.yaw); sy_ = Math.sin(cam.yaw);
+    cp_ = Math.cos(cam.pitch); sp_ = Math.sin(cam.pitch);
+    halfC = cols / 2; halfR = rows / 2;
+
+    /* --- cámara --- */
+    if (!auto && t - lastInput > 14 && mode === "fly") auto = true;
+    if (auto) {
+      const R = REGIONS[tour % NREG];
+      if (!frame.n || frame.n % 90 === 0) tourTarget = bigIslandNear(R.cx, R.cz, 200) || tourTarget;
+      const T = tourTarget && Math.hypot(tourTarget.x - R.cx, tourTarget.z - R.cz) < 260 ? tourTarget : { x: R.cx, y: R.cy, z: R.cz, r: 24 };
+      const orbit = t * (reduced ? 0.05 : 0.10);
+      const rad = 62 + T.r * 2.2;
+      const tx = T.x + Math.cos(orbit) * rad, ty = T.y + 22 + Math.sin(t * 0.09) * 12, tz = T.z + Math.sin(orbit) * rad;
+      const k = 1 - Math.pow(0.001, dt);
+      cam.x = mix(cam.x, tx, k * 1.4); cam.y = mix(cam.y, ty, k * 1.4); cam.z = mix(cam.z, tz, k * 1.4);
+      const lx = T.x - cam.x, ly = T.y + 2 - cam.y, lz = T.z - cam.z;
+      let dyaw = Math.atan2(lx, lz) - cam.yaw;
+      while (dyaw > Math.PI) dyaw -= TAU; while (dyaw < -Math.PI) dyaw += TAU;
+      cam.yaw += dyaw * k * 1.2;
+      cam.pitch = mix(cam.pitch, Math.atan2(ly, Math.hypot(lx, lz)), k * 1.2);
+      tourT += dt;
+      if (tourT > 26) { tourT = 0; tour++; tourTarget = null; toast(REGIONS[tour % NREG].name, REGIONS[tour % NREG].sub); }
+    } else if (mode === "fly") {
+      const sp = 1.05 * (keys["shift"] ? 5.5 : 1) * (dt * 60);
+      const fx = sy_ * cp_, fy = sp_, fz = cy_ * cp_;
+      let mvF = (keys["w"] ? 1 : 0) - (keys["s"] ? 1 : 0);
+      let mvR = (keys["d"] ? 1 : 0) - (keys["a"] ? 1 : 0);
+      if (stick.active) { mvF -= stick.dy; mvR += stick.dx; }
+      cam.x += fx * sp * mvF + cy_ * sp * mvR;
+      cam.y += fy * sp * mvF;
+      cam.z += fz * sp * mvF - sy_ * sp * mvR;
+      if (keys["e"]) cam.y += sp;
+      if (keys["q"]) cam.y -= sp;
+      if (keys["arrowleft"])  { cam.yaw -= 0.028; lastInput = t; }
+      if (keys["arrowright"]) { cam.yaw += 0.028; lastInput = t; }
+      if (keys["arrowup"])    { cam.pitch = Math.min(1.35, cam.pitch + 0.022); lastInput = t; }
+      if (keys["arrowdown"])  { cam.pitch = Math.max(-1.35, cam.pitch - 0.022); lastInput = t; }
+      collide(cam);
+    } else {
+      const sp = 0.34 * (keys["shift"] ? 2.2 : 1) * (dt * 60);
+      let mvF = (keys["w"] ? 1 : 0) - (keys["s"] ? 1 : 0);
+      let mvR = (keys["d"] ? 1 : 0) - (keys["a"] ? 1 : 0);
+      if (stick.active) { mvF -= stick.dy; mvR += stick.dx; }
+      cam.x += sy_ * sp * mvF + cy_ * sp * mvR;
+      cam.z += cy_ * sp * mvF - sy_ * sp * mvR;
+      if (keys["arrowleft"])  cam.yaw -= 0.03;
+      if (keys["arrowright"]) cam.yaw += 0.03;
+      const g = islandAt(cam.x, cam.z);
+      if (!g) { mode = "fly"; toast("Te caíste", "vuelas otra vez"); }
+      else {
+        const target = g.top + 1.8;
+        vy -= 22 * dt;
+        cam.y += vy * dt;
+        if (cam.y <= target) { cam.y = target; vy = 0; }
+        else if (cam.y > target + 12) { mode = "fly"; }
+      }
+    }
+    cy_ = Math.cos(cam.yaw); sy_ = Math.sin(cam.yaw);
+    cp_ = Math.cos(cam.pitch); sp_ = Math.sin(cam.pitch);
+    const fwd = [sy_ * cp_, sp_, cy_ * cp_];
+
+    /* --- pedir la rejilla al worker --- */
+    if (!pending && free) {
+      pending = true;
+      const z = free.z, m = free.m, s = free.s;
+      free = null;
+      worker.postMessage({
+        t: "f", cam: [cam.x, cam.y, cam.z], yaw: cam.yaw, pitch: cam.pitch,
+        cols, rows, focal, focalY, far: FAR, halfFov,
+        mul: MUL, emissive: EMI, sun: lightDir, amb, skyLight,
+        z, m, s
+      }, [z.buffer, m.buffer, s.buffer]);
+    }
+    const set = cur;
+
+    /* --- estrellas --- */
+    if (starFade > 0.02) for (let i = 0; i < NSTAR; i++) plot(set, cam.x + SXa[i], cam.y + SYa[i], cam.z + SZa[i], STAR, SBa[i] * starFade);
+
+    /* --- sol y luna --- */
+    for (const body of [[sunDir, 1], [[-sunDir[0], -sunDir[1], -sunDir[2]], 0.75]]) {
+      const d = body[0];
+      if (d[1] < -0.12) continue;
+      const D = 900, cxp = cam.x + d[0] * D, cyp = cam.y + d[1] * D, czp = cam.z + d[2] * D;
+      const rx = -d[2], rz = d[0], rl = Math.hypot(rx, rz) || 1;
+      const ux = -d[1] * (rz / rl), uy = Math.hypot(d[0], d[2]), uz = d[1] * (rx / rl);
+      const S = 48;
+      for (const o of DISC)
+        plot(set, cxp + (rx/rl) * o[0] * S + ux * o[1] * S, cyp + uy * o[1] * S, czp + (rz/rl) * o[0] * S + uz * o[1] * S, SUN, o[2] * body[1]);
+    }
+
+    /* --- cascadas: se enganchan a las islas grandes cercanas --- */
+    fallSrc.length = 0;
+    for (let i = 0; i < islandsFlat.length && fallSrc.length < 5; i += 5) {
+      const ix = islandsFlat[i], iy = islandsFlat[i+1], iz = islandsFlat[i+2], ir = islandsFlat[i+3];
+      if (ir < 13) continue;
+      if (Math.hypot(ix - cam.x, iz - cam.z) > 230) continue;
+      fallSrc.push([ix, iy, iz, ir, islandsFlat[i+4]]);
+    }
+    nearestFall = 1e9;
+    if (fallSrc.length) {
+      for (let i = 0; i < FALLS.length; i++) {
+        const p = FALLS[i];
+        const S = fallSrc[i % fallSrc.length];
+        p.t += reduced ? 0.5 : 1;
+        if (p.t > p.life) p.t = 0;
+        const x = S[0] + Math.cos(p.ang) * S[3] * 0.95 + p.jx;
+        const z = S[2] + Math.sin(p.ang) * S[3] * 0.95 + p.jz;
+        const y = S[1] - 1 - p.t * p.v * 0.16 - 0.03 * p.t * p.t * 0.16;
+        const d = Math.hypot(x - cam.x, y - cam.y, z - cam.z);
+        if (d < nearestFall) nearestFall = d;
+        plot(set, x, y, z, S[4] * 8 + 4, 0.35 + (1 - p.t / p.life) * 0.6);
+      }
+    }
+
+    /* --- faros --- */
+    for (const b of beacons) {
+      if (Math.abs(b.x - cam.x) > 420 || Math.abs(b.z - cam.z) > 420) continue;
+      if (!b.placed) {
+        const R = REGIONS[b.reg], I = bigIslandNear(R.cx, R.cz, 220);
+        if (I) { b.x = I.x; b.z = I.z; b.y = I.y + relief(I.x, I.z) - 1; b.placed = true; }
+      }
+      b.glow = mix(b.glow, b.lit ? 1 : 0.12, 1 - Math.pow(0.02, dt));
+      const M0 = b.reg * 8;
+      for (let s = 0; s < 150; s++) {
+        const tt = s / 150, a = tt * 22 + t * (b.lit ? 1.2 : 0.15);
+        const w = (1 - tt) * 1.2 + 0.3;
+        plot(set, b.x + Math.cos(a) * w, b.y + tt * 26, b.z + Math.sin(a) * w, M0 + 2, 0.3 + b.glow * 0.7);
+      }
+      if (b.glow > 0.2) for (let s = 0; s < 60; s++) {
+        const a = Math.random() * TAU, r = Math.random() * 6 * b.glow;
+        plot(set, b.x + Math.cos(a) * r, b.y + 27 + Math.random() * 8 * b.glow, b.z + Math.sin(a) * r, M0 + 3, b.glow * (1 - r / 8));
+      }
+    }
+
+    /* --- dragones --- */
+    let anyAlert = 0;
+    for (const d of dragons) {
+      const far = Math.abs(d.p[0] - cam.x) > 420 || Math.abs(d.p[2] - cam.z) > 420;
+      const vx = d.p[0] - cam.x, vyy = d.p[1] - cam.y, vz = d.p[2] - cam.z;
+      const dist = Math.hypot(vx, vyy, vz) || 1;
+      const look2 = (vx * fwd[0] + vyy * fwd[1] + vz * fwd[2]) / dist;
+      const watched = look2 > 0.951 && dist < 170 && !auto;
+      const before = d.alert;
+      d.alert = clamp(d.alert + (watched ? 1.1 : -0.22) * dt, 0, 1);
+      if (before <= 0.5 && d.alert > 0.5) roar(1 - d.bob * 0.02);
+      anyAlert = Math.max(anyAlert, d.alert);
+      const ax = cam.x + fwd[0] * 40, ay = cam.y + fwd[1] * 40, az2 = cam.z + fwd[2] * 40;
+      const cx = mix(d.home[0], ax, d.alert * 0.94), cyy = mix(d.home[1], ay, d.alert * 0.94), cz = mix(d.home[2], az2, d.alert * 0.94);
+      const Rr = mix(d.R, 20, d.alert);
+      d.a += d.sp * dt * (1 + d.alert * 2.2) * (reduced ? 0.5 : 1);
+      d.p[0] = cx + Math.cos(d.a) * Rr;
+      d.p[1] = cyy + Math.sin(t * 0.9 + d.R) * d.bob * (1 - d.alert * 0.6);
+      d.p[2] = cz + Math.sin(d.a) * Rr;
+      d.hist.unshift([d.p[0], d.p[1], d.p[2]]);
+      if (d.hist.length > 70) d.hist.pop();
+      if (far) continue;
+      const glow = 0.78 + d.alert * 0.22;
+      for (let s = 0; s < 16; s++) {
+        const h = d.hist[Math.min(d.hist.length - 1, s * 3)];
+        const w = s === 0 ? 0.75 : Math.max(0.18, 0.62 - s * 0.032);
+        for (let k = 0; k < 5; k++)
+          plot(set, h[0] + (Math.random() - .5) * w * 2, h[1] + (Math.random() - .5) * w, h[2] + (Math.random() - .5) * w * 2, d.mat, s === 0 ? 1 : glow - s * 0.038);
+        if (s >= 1 && s <= 4 && d.hist.length > s * 3 + 3) {
+          const a2 = d.hist[Math.min(d.hist.length - 1, s * 3 + 3)];
+          const dx = h[0] - a2[0], dz = h[2] - a2[2], L = Math.hypot(dx, dz) || 1;
+          const flap = Math.sin(t * (reduced ? 1.6 : 4.4) * (1 + d.alert) + d.R) * 3.4;
+          for (let w2 = 1; w2 <= 9; w2++) {
+            const e = w2 * 0.85, yy = h[1] + flap * (w2 / 9);
+            plot(set, h[0] + (-dz/L) * e, yy, h[2] + (dx/L) * e, d.mat, glow - w2 * 0.05);
+            plot(set, h[0] + ( dz/L) * e, yy, h[2] - (dx/L) * e, d.mat, glow - w2 * 0.05);
+          }
+        }
+      }
+      if (d.alert > 0.45) {
+        const h = d.hist[0], a2 = d.hist[Math.min(d.hist.length - 1, 3)];
+        const dx = h[0] - a2[0], dy2 = h[1] - a2[1], dz = h[2] - a2[2], L = Math.hypot(dx, dy2, dz) || 1;
+        for (let k = 0; k < 26; k++) {
+          const e = 1 + Math.random() * 7 * d.alert;
+          plot(set, h[0] + dx/L*e + (Math.random()-.5)*e*.5, h[1] + dy2/L*e + (Math.random()-.5)*e*.5, h[2] + dz/L*e + (Math.random()-.5)*e*.5, d.lamp, (1 - e/9) * d.alert);
+        }
+      }
+    }
+
+    /* --- audio reactivo --- */
+    if (audio.on && audio.ctx) {
+      const speed = keys["shift"] ? 1 : 0.45;
+      const alt = clamp(Math.abs(cam.y) / 120, 0, 1);
+      audio.windF.frequency.value = 320 + alt * 900 + speed * 300;
+      audio.wind.gain.value = (mode === "walk" ? 0.10 : 0.16 + alt * 0.16) * (0.6 + speed * 0.6);
+      audio.water.gain.value = clamp(1 - nearestFall / 90, 0, 1) * 0.42;
+      const dfreq = 44 + (nearest % 6) * 5.5;
+      audio.drone.forEach((o, i) => o.frequency.setTargetAtTime(dfreq + i * 0.6, audio.ctx.currentTime, 1.5));
+      audio.droneG.gain.value = 0.05 + 0.07 * (1 - clamp(nd / 400, 0, 1));
+    }
+
+    /* --- pintar --- */
+    ctx.fillStyle = "rgb(" + (sky[0]|0) + "," + (sky[1]|0) + "," + (sky[2]|0) + ")";
+    ctx.fillRect(0, 0, innerWidth, innerHeight);
+    drawn = 0;
+    const mb = set.m, sb = set.s;
+    for (let y = 0; y < rows; y++) {
+      const base = y * cols;
+      let run = "", runKey = -1, runStart = 0;
+      for (let x = 0; x < cols; x++) {
+        const sv = sb[base + x];
+        const key = sv === 0 ? -1 : mb[base + x] * SHADES + (sv - 1);
+        if (key !== runKey) {
+          if (runKey >= 0 && run) { ctx.fillStyle = COLORS[runKey]; ctx.fillText(run, runStart * cellW, y * cellH); drawn += run.length; }
+          run = ""; runKey = key; runStart = x;
+        }
+        if (key >= 0) run += CHARS[key];
+      }
+      if (runKey >= 0 && run) { ctx.fillStyle = COLORS[runKey]; ctx.fillText(run, runStart * cellW, y * cellH); drawn += run.length; }
+    }
+
+    /* --- HUD --- */
+    frame.n = (frame.n || 0) + 1;
+    if (frame.n % 6 === 0) {
+      const hh = (dayPhase * 24 + 6) % 24;   // mediodía = sol en lo más alto
+      $("clk").textContent = String(Math.floor(hh)).padStart(2, "0") + ":" + String(Math.floor((hh % 1) * 60)).padStart(2, "0");
+      $("pos").textContent = Math.round(cam.x) + ", " + Math.round(cam.z);
+      $("alt").textContent = Math.round(cam.y * 12);
+      $("gly").textContent = drawn;
+      $("sec").textContent = stats.visible + "/" + stats.sectors;
+      $("pts").textContent = (stats.live / 1000).toFixed(0) + "k";
+      $("reg").textContent = PAL[nearest].name;
+      $("faros").textContent = litCount + "/" + REGIONS.length;
+      const md = $("mode");
+      md.textContent = auto ? "Gran tour" : mode === "walk" ? "A pie" : "Vuelo libre";
+      md.className = "hud mode" + (auto ? "" : " free");
+      $("alert").classList.toggle("on", anyAlert > 0.5);
+      const nb = nearBeacon();
+      $("hint").classList.toggle("on", !!(nb && !nb.lit));
+      if (!auto && mode === "fly" && !nb) $("hint2").classList.toggle("on", !!landingSpot());
+      else $("hint2").classList.remove("on");
+    }
+    if (mapOpen && frame.n % 5 === 0) drawMap();
+    if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) $("toast").classList.remove("on"); }
+    requestAnimationFrame(frame);
+  }
+
+  /* ================= MAPA ================= */
+  const mapc = $("map"), mx = mapc.getContext("2d");
+  let mapScale = 900;
+  const toMap = (x, z) => [((x - cam.x) / mapScale) * mapc.width + mapc.width / 2, ((z - cam.z) / mapScale) * mapc.height + mapc.height / 2];
+  function drawMap() {
+    const W = mapc.width, H = mapc.height;
+    mx.fillStyle = "#06090f"; mx.fillRect(0, 0, W, H);
+    mx.strokeStyle = "rgba(140,152,196,.10)"; mx.lineWidth = 1;
+    const step = 200;
+    const gx0 = Math.floor((cam.x - mapScale / 2) / step) * step;
+    const gz0 = Math.floor((cam.z - mapScale / 2) / step) * step;
+    for (let g = 0; g <= mapScale / step + 1; g++) {
+      const [a] = toMap(gx0 + g * step, 0), [, b] = toMap(0, gz0 + g * step);
+      mx.beginPath(); mx.moveTo(a, 0); mx.lineTo(a, H); mx.moveTo(0, b); mx.lineTo(W, b); mx.stroke();
+    }
+    REGIONS.forEach((R, i) => {
+      const [px, py] = toMap(R.cx, R.cz), rr = (R.span / mapScale) * W;
+      const c = R.mats[1];
+      const grad = mx.createRadialGradient(px, py, 0, px, py, rr);
+      grad.addColorStop(0, "rgba(" + c[0] + "," + c[1] + "," + c[2] + ",.15)");
+      grad.addColorStop(1, "rgba(" + c[0] + "," + c[1] + "," + c[2] + ",0)");
+      mx.fillStyle = grad; mx.beginPath(); mx.arc(px, py, rr, 0, TAU); mx.fill();
+      mx.textAlign = "center";
+      mx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + ",.92)";
+      mx.font = '600 16px Cinzel, serif';
+      mx.fillText(R.name.toUpperCase(), px, py - rr * 0.5);
+      mx.fillStyle = "rgba(160,172,208,.5)";
+      mx.font = '500 10px "IBM Plex Mono", monospace';
+      mx.fillText("[" + (i + 1) + "] " + R.sub, px, py - rr * 0.5 + 15);
+      const b = beacons[i];
+      mx.fillStyle = b.lit ? "#ffd07a" : "rgba(140,152,196,.5)";
+      mx.font = '14px "IBM Plex Mono", monospace';
+      mx.fillText(b.lit ? "◉" : "○", px, py + 5);
+    });
+    for (let i = 0; i < islandsFlat.length; i += 5) {
+      const [px, py] = toMap(islandsFlat[i], islandsFlat[i+2]);
+      if (px < -20 || px > W + 20 || py < -20 || py > H + 20) continue;
+      const c = PAL[islandsFlat[i+4]].mats[1];
+      const r = Math.max(1.4, (islandsFlat[i+3] / mapScale) * W * 1.4);
+      mx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + ",.72)";
+      mx.beginPath(); mx.arc(px, py, r, 0, TAU); mx.fill();
+    }
+    for (const d of dragons) {
+      const [px, py] = toMap(d.p[0], d.p[2]);
+      if (px < 0 || px > W || py < 0 || py > H) continue;
+      mx.fillStyle = d.alert > 0.4 ? "#ff7a72" : "rgba(226,120,110,.7)";
+      mx.font = '13px "IBM Plex Mono", monospace'; mx.textAlign = "center";
+      mx.fillText("✦", px, py + 4);
+    }
+    const cxp = W / 2, cyp = H / 2, dx = Math.sin(cam.yaw), dz = Math.cos(cam.yaw);
+    mx.fillStyle = "#5fe3d0";
+    mx.beginPath();
+    mx.moveTo(cxp + dx * 13, cyp + dz * 13);
+    mx.lineTo(cxp - dz * 7 - dx * 7, cyp + dx * 7 - dz * 7);
+    mx.lineTo(cxp + dz * 7 - dx * 7, cyp - dx * 7 - dz * 7);
+    mx.closePath(); mx.fill();
+    mx.strokeStyle = "rgba(95,227,208,.30)";
+    mx.beginPath(); mx.arc(cxp, cyp, (FAR / mapScale) * W, 0, TAU); mx.stroke();
+    mx.fillStyle = "rgba(160,172,208,.7)";
+    mx.font = '500 11px "IBM Plex Mono", monospace';
+    mx.textAlign = "left"; mx.fillText("EL MUNDO NO TIENE BORDE · 200 U POR CASILLA", 16, H - 16);
+    mx.textAlign = "right"; mx.fillText(Math.round(cam.x) + " , " + Math.round(cam.z), W - 16, H - 16);
+  }
+
+  /* ================= ARRANQUE ================= */
+  function boot() {
+    resize();
+    const bar = $("bar").firstElementChild;
+    bar.style.width = "40%";
+    $("bootmsg").textContent = inlineMode ? "Sin worker: modo compatible" : "Sembrando los primeros sectores";
+    // dos fotogramas para que el worker genere lo cercano antes de mostrar nada
+    let warm = 0;
+    const warmup = () => {
+      if (!pending && free) {
+        pending = true;
+        const z = free.z, m = free.m, s = free.s; free = null;
+        worker.postMessage({ t: "f", cam: [cam.x, cam.y, cam.z], yaw: cam.yaw, pitch: cam.pitch,
+          cols, rows, focal, focalY, far: FAR, halfFov, mul: MUL, emissive: EMI,
+          sun: [0.4, 0.8, -0.45], amb: 0.8, skyLight: 0.7, z, m, s }, [z.buffer, m.buffer, s.buffer]);
+      }
+      warm++;
+      bar.style.width = (40 + warm * 6) + "%";
+      if (warm < 10) return requestAnimationFrame(warmup);
+      bar.style.width = "100%";
+      $("boot").hidden = true;
+      window.__ready = true;
+      toast("Islas de Aether", "un mundo sin borde");
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(warmup);
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot).catch(boot); else boot();
+})();
+</script>
+
+</body>
+</html>
