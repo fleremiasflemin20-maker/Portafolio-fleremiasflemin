@@ -80,11 +80,14 @@ export function Habilidades({ faceta }: { faceta: Faceta }) {
       </dl>
 
       {faceta.habilidades.length < 3 && (
-        // Se dice en voz alta en vez de rellenar con cifras inventadas: el CV
-        // solo lista dos competencias hoteleras con porcentaje.
+        // Se dice en voz alta en vez de rellenar con cifras inventadas. El
+        // texto es genérico a propósito: lo mismo vale para una faceta con
+        // pocas competencias medibles en el CV que para una que todavía no
+        // tiene ninguna.
         <p className="mt-5 font-mono text-[0.62rem] leading-relaxed text-paper/30">
-          El CV solo cuantifica dos competencias en este ámbito. El resto de la
-          trayectoria hotelera está en las misiones, no en porcentajes.
+          {faceta.habilidades.length === 0
+            ? 'Todavía no hay porcentajes que enseñar aquí — se suman según lleguen datos reales, nunca inventados.'
+            : 'El CV solo cuantifica algunas competencias en este ámbito. El resto está en las piezas, no en porcentajes.'}
         </p>
       )}
     </div>

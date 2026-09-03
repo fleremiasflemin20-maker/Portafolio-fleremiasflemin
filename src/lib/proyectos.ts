@@ -21,7 +21,7 @@
  */
 export type Proyecto = {
   nombre: string
-  faceta: 'software' | 'producto' | 'hoteleria'
+  faceta: 'software' | 'producto' | '3d'
   resumen: string
   /** Lo que hace especial a esta pieza. Una línea, técnica, sin adjetivos. */
   nota: string

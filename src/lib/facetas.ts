@@ -31,9 +31,9 @@ export type Faceta = {
   stats: { etiqueta: string; valor: string }[]
   /**
    * Barras de habilidad, con los porcentajes del apartado STACK TECNOLÓGICO
-   * del CV. Ni uno inventado: los diez que hay están repartidos por dominio, y
-   * por eso Hotelería tiene menos — el CV solo lista dos competencias
-   * hoteleras con porcentaje.
+   * del CV. Ni uno inventado — y por eso una faceta puede tener menos de
+   * tres, o ninguna: mejor un aviso honesto que una cifra puesta para
+   * rellenar. Ver el fallback en `Habilidades.tsx`.
    */
   habilidades: { nombre: string; nivel: number }[]
 }
@@ -87,24 +87,31 @@ export const FACETAS: Faceta[] = [
     ],
   },
   {
-    id: 'hoteleria',
-    clave: 'OPS',
-    nombre: 'Hotelería',
-    papel: 'Ing. en Admin. de Empresas Hoteleras · UDLA',
+    /*
+     * El tercer sector deja de ser la trayectoria hotelera y pasa a ser el
+     * cajón de proyectos en 3D e IA — figuras generadas con Meshy y
+     * herramientas parecidas, automatizaciones y piezas sueltas que no
+     * encajan como sitio web ni como producto. El id se queda igual de
+     * estable que los otros dos, solo que ahora describe un tipo de trabajo
+     * en vez de un puesto.
+     */
+    id: '3d',
+    clave: '3D',
+    nombre: '3D & IA',
+    papel: 'Modelado 3D · Automatización con IA',
     descripcion:
-      'Empecé de Houseman y llegué a Housekeeping Manager en dos años y medio, en hoteles de lujo de Santa Monica. Cada fricción que viví ahí dentro acabó siendo una función del PMS.',
+      'Figuras y objetos generados con Meshy y otras herramientas de IA, más automatizaciones y piezas sueltas que no encajan como sitio web ni como producto. Un cajón de proyectos, no una categoría cerrada — crece según se suman piezas.',
     modelo: 'marina',
-    desde: '#FFB020',
-    hasta: '#FF5E5B',
-    tinta: '#FFC65C',
+    desde: '#00E5D1',
+    hasta: '#2AC3FF',
+    tinta: '#3BE0D0',
     stats: [
-      { etiqueta: 'Ascenso', valor: 'Houseman → Manager' },
-      { etiqueta: 'En', valor: '2,5 años' },
-      { etiqueta: 'Turnover', valor: '+30%' },
+      { etiqueta: 'Modelado', valor: 'Meshy AI' },
+      { etiqueta: 'Automatización', valor: 'Agentes · workflows' },
+      { etiqueta: 'Estado', valor: 'En construcción' },
     ],
-    habilidades: [
-      { nombre: 'Gestión hotelera', nivel: 96 },
-      { nombre: 'Hotel Tech Software', nivel: 95 },
-    ],
+    // Vacío a propósito: nada de porcentajes inventados. Ver el aviso que
+    // Habilidades.tsx muestra cuando hay menos de tres.
+    habilidades: [],
   },
 ]
