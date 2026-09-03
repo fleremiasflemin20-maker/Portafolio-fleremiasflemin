@@ -135,7 +135,7 @@ export const PROYECTOS: Proyecto[] = [
   },
   {
     nombre: 'Andy Detalles',
-    faceta: 'hoteleria',
+    faceta: 'software',
     resumen: 'Repostería con pedidos por WhatsApp.',
     nota: 'El pedido sale montado al chat: sin backend que mantener.',
     sitio: `${PAGES}/Andy-detalles/`,
