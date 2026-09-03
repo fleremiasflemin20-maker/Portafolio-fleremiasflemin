@@ -73,113 +73,203 @@ export function RuedaPersonaje({
     setAngulo(giro.current)
   }, [activa])
 
+  /*
+   * La pista de "esto se toca".
+   *
+   * La rueda es pequeña —80..96 px— y queda fija en una esquina discreta:
+   * nada en su tamaño dice "aquí cambia toda la página". Sin una señal,
+   * bastante gente nunca prueba a tocar un sector distinto del que ya está
+   * activo, y se pierde el resto del trabajo.
+   *
+   * Dos capas, no una: el pulso es permanente y ambiental —dice "esto está
+   * vivo"—, y la pista de texto es puntual y desaparece sola, o en cuanto se
+   * usa la rueda una vez. Guardada en `localStorage`, igual que
+   * `manos-invertido`: quien ya lo descubrió no necesita que se lo repitan
+   * en cada visita.
+   */
+  const [huboInteraccion, setHuboInteraccion] = useState(() => {
+    try {
+      return localStorage.getItem('rueda-vista') === '1'
+    } catch {
+      return false
+    }
+  })
+  const [mostrarPista, setMostrarPista] = useState(false)
+
+  useEffect(() => {
+    if (huboInteraccion) return
+    const raiz = document.documentElement
+    let temporizador: number | undefined
+
+    // Empieza a contar en cuanto termina la cinemática, no desde que este
+    // componente se monta: montado y visible no es lo mismo, y contando
+    // desde el montaje la pista podía aparecer —y esconderse sola— con la
+    // pantalla de carga todavía puesta encima.
+    const empezar = () => {
+      temporizador = window.setTimeout(() => setMostrarPista(true), 2200)
+    }
+
+    if (!raiz.classList.contains('cargando')) {
+      empezar()
+      return () => clearTimeout(temporizador)
+    }
+
+    const obs = new MutationObserver(() => {
+      if (!raiz.classList.contains('cargando')) {
+        empezar()
+        obs.disconnect()
+      }
+    })
+    obs.observe(raiz, { attributes: true, attributeFilter: ['class'] })
+    return () => {
+      obs.disconnect()
+      clearTimeout(temporizador)
+    }
+  }, [huboInteraccion])
+
+  // Se esconde sola si nadie la toca: informar no es interrumpir para siempre.
+  useEffect(() => {
+    if (!mostrarPista) return
+    const t = setTimeout(() => setMostrarPista(false), 7000)
+    return () => clearTimeout(t)
+  }, [mostrarPista])
+
+  const cambiar = (i: number) => {
+    if (!huboInteraccion) {
+      setHuboInteraccion(true)
+      setMostrarPista(false)
+      try {
+        localStorage.setItem('rueda-vista', '1')
+      } catch {
+        /* Modo privado: se pierde al recargar y no pasa nada. */
+      }
+    }
+    onCambio(i)
+  }
+
   return (
-    <svg viewBox="-100 -100 200 200" className="h-full w-full overflow-visible" aria-hidden="false">
-      <title>Selector de faceta profesional</title>
+    <div className="relative h-full w-full">
+      {/* Fuera del SVG: es texto normal, y `bottom-full` lo saca del
+          cuadrado de 80..96 px de la rueda sin que ningún `overflow`
+          lo recorte. */}
+      {mostrarPista && (
+        <div className="entra pointer-events-none absolute bottom-full left-1/2 mb-3 -translate-x-1/2 whitespace-nowrap">
+          <p
+            className="pista-rueda border-2 bg-ink/85 px-3 py-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] backdrop-blur-sm"
+            style={{ borderColor: 'var(--tinta)', color: 'var(--tinta)' }}
+          >
+            Toca otro color ↓
+          </p>
+        </div>
+      )}
 
-      <g
-        style={{
-          transform: `rotate(${angulo}deg)`,
-          /*
-           * `fill-box`, no `view-box`.
-           *
-           * Con `view-box` el navegador resuelve el 50% desde la ESQUINA del
-           * viewBox, no desde su centro, y el anillo acababa dibujado 251 px por
-           * debajo de donde toca — medido, no estimado. `fill-box` usa la caja
-           * de la propia figura, cuyo centro es exactamente el eje del anillo.
-           */
-          transformBox: 'fill-box',
-          transformOrigin: '50% 50%',
-          transition: 'transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-        className="rueda-anillo"
-      >
-        {FACETAS.map((f, i) => {
-          const esta = i === activa
-          return (
-            <g key={f.id}>
-              <defs>
-                <linearGradient id={`grad-${f.id}`} x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor={f.desde} />
-                  <stop offset="100%" stopColor={f.hasta} />
-                </linearGradient>
-              </defs>
+      <svg viewBox="-100 -100 200 200" className="rueda-pulso h-full w-full overflow-visible" aria-hidden="false">
+        <title>Selector de faceta profesional</title>
 
-              <path
-                d={sector(i * PASO, (i + 1) * PASO)}
-                fill={esta ? `url(#grad-${f.id})` : '#17171C'}
-                stroke={esta ? f.tinta : '#FFFFFF14'}
-                strokeWidth={esta ? 1.2 : 0.8}
-                className="transition-[fill,stroke] duration-500"
-                style={esta ? { filter: `drop-shadow(0 0 10px ${f.desde}88)` } : undefined}
-              />
+        <g
+          style={{
+            transform: `rotate(${angulo}deg)`,
+            /*
+             * `fill-box`, no `view-box`.
+             *
+             * Con `view-box` el navegador resuelve el 50% desde la ESQUINA del
+             * viewBox, no desde su centro, y el anillo acababa dibujado 251 px por
+             * debajo de donde toca — medido, no estimado. `fill-box` usa la caja
+             * de la propia figura, cuyo centro es exactamente el eje del anillo.
+             */
+            transformBox: 'fill-box',
+            transformOrigin: '50% 50%',
+            transition: 'transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+          className="rueda-anillo"
+        >
+          {FACETAS.map((f, i) => {
+            const esta = i === activa
+            return (
+              <g key={f.id}>
+                <defs>
+                  <linearGradient id={`grad-${f.id}`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={f.desde} />
+                    <stop offset="100%" stopColor={f.hasta} />
+                  </linearGradient>
+                </defs>
 
-              {/*
-                La etiqueta se contragira lo mismo que el anillo, para que el
-                texto siga leyéndose en horizontal mientras la rueda gira. Sin
-                esto las palabras acaban boca abajo.
-              */}
-              <g transform={`rotate(${i * PASO + PASO / 2}) translate(0 -${(R_EXT + R_INT) / 2})`}>
+                <path
+                  d={sector(i * PASO, (i + 1) * PASO)}
+                  fill={esta ? `url(#grad-${f.id})` : '#17171C'}
+                  stroke={esta ? f.tinta : '#FFFFFF14'}
+                  strokeWidth={esta ? 1.2 : 0.8}
+                  className="transition-[fill,stroke] duration-500"
+                  style={esta ? { filter: `drop-shadow(0 0 10px ${f.desde}88)` } : undefined}
+                />
+
                 {/*
-                  Contragiro doble: su sitio en la corona MÁS el giro actual del
-                  anillo, para que el texto se lea siempre en horizontal.
-
-                  Va como transformación CSS con LA MISMA transición que el
-                  anillo, no como atributo SVG. Con el atributo, el contragiro
-                  salta al valor final de golpe mientras el anillo tarda 0,7 s en
-                  llegar: durante todo ese rato las palabras se ven torcidas.
-                  Compartiendo duración y curva, las dos van sincronizadas.
+                  La etiqueta se contragira lo mismo que el anillo, para que el
+                  texto siga leyéndose en horizontal mientras la rueda gira. Sin
+                  esto las palabras acaban boca abajo.
                 */}
-                <g
-                  style={{
-                    transform: `rotate(${-(i * PASO + PASO / 2) - angulo}deg)`,
-                    transformBox: 'fill-box',
-                    transformOrigin: '50% 50%',
-                    transition: 'transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
-                  }}
-                  className="rueda-anillo"
-                >
-                  <text
-                    textAnchor="middle"
-                    dy="4"
-                    className="font-mono"
+                <g transform={`rotate(${i * PASO + PASO / 2}) translate(0 -${(R_EXT + R_INT) / 2})`}>
+                  {/*
+                    Contragiro doble: su sitio en la corona MÁS el giro actual del
+                    anillo, para que el texto se lea siempre en horizontal.
+
+                    Va como transformación CSS con LA MISMA transición que el
+                    anillo, no como atributo SVG. Con el atributo, el contragiro
+                    salta al valor final de golpe mientras el anillo tarda 0,7 s en
+                    llegar: durante todo ese rato las palabras se ven torcidas.
+                    Compartiendo duración y curva, las dos van sincronizadas.
+                  */}
+                  <g
                     style={{
-                      fontSize: 8,
-                      letterSpacing: '0.18em',
-                      fill: esta ? '#0A0A0B' : '#FFFFFF66',
-                      fontWeight: 700,
+                      transform: `rotate(${-(i * PASO + PASO / 2) - angulo}deg)`,
+                      transformBox: 'fill-box',
+                      transformOrigin: '50% 50%',
+                      transition: 'transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
                     }}
+                    className="rueda-anillo"
                   >
-                    {f.clave}
-                  </text>
+                    <text
+                      textAnchor="middle"
+                      dy="4"
+                      className="font-mono"
+                      style={{
+                        fontSize: 8,
+                        letterSpacing: '0.18em',
+                        fill: esta ? '#0A0A0B' : '#FFFFFF66',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {f.clave}
+                    </text>
+                  </g>
                 </g>
               </g>
-            </g>
-          )
-        })}
-      </g>
+            )
+          })}
+        </g>
 
-      {/* Los botones van fuera del grupo que gira: si giraran, el área
-          pulsable se movería y habría que perseguirla con el ratón. */}
-      {FACETAS.map((f, i) => (
-        <path
-          key={`hit-${f.id}`}
-          d={sector(i * PASO, (i + 1) * PASO)}
-          fill="transparent"
-          role="button"
-          tabIndex={0}
-          aria-label={`${f.nombre} — ${f.papel}`}
-          aria-pressed={i === activa}
-          className="cursor-pointer outline-none focus-visible:fill-white/10"
-          transform={`rotate(${-(activa + 0.5) * PASO})`}
-          onClick={() => onCambio(i)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCambio(i) }
-            if (e.key === 'ArrowRight') onCambio((activa + 1) % N)
-            if (e.key === 'ArrowLeft') onCambio((activa - 1 + N) % N)
-          }}
-        />
-      ))}
-    </svg>
+        {/* Los botones van fuera del grupo que gira: si giraran, el área
+            pulsable se movería y habría que perseguirla con el ratón. */}
+        {FACETAS.map((f, i) => (
+          <path
+            key={`hit-${f.id}`}
+            d={sector(i * PASO, (i + 1) * PASO)}
+            fill="transparent"
+            role="button"
+            tabIndex={0}
+            aria-label={`${f.nombre} — ${f.papel}`}
+            aria-pressed={i === activa}
+            className="cursor-pointer outline-none focus-visible:fill-white/10"
+            transform={`rotate(${-(activa + 0.5) * PASO})`}
+            onClick={() => cambiar(i)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cambiar(i) }
+              if (e.key === 'ArrowRight') cambiar((activa + 1) % N)
+              if (e.key === 'ArrowLeft') cambiar((activa - 1 + N) % N)
+            }}
+          />
+        ))}
+      </svg>
+    </div>
   )
 }

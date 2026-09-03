@@ -11,11 +11,19 @@ import { Expediente } from './components/Expediente'
 import { Galeria } from './components/Galeria'
 import { Cinematica } from './components/Cinematica'
 import { Boton } from './components/Boton'
+import { BotonCV } from './components/BotonCV'
 import { Golpes } from './components/Golpes'
 import { TituloVivo } from './components/TituloVivo'
 import { Modelos } from './components/Modelos'
 import { PanelRetro } from './components/PanelRetro'
 import { ControlManos } from './components/ControlManos'
+
+/* Mismo patrón que `VIDEO` en Cinematica.tsx y `galeria()` en proyectos.ts:
+   el prefijo de BASE_URL hace falta porque en GitHub Pages el sitio cuelga
+   de /<repo>/, no de la raíz del dominio. */
+const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')
+const CV_ES = `${BASE}/cv/Lenin_Bonilla_CV_2026_ES.pdf`
+const CV_EN = `${BASE}/cv/Lenin_Bonilla_CV_2026_EN.pdf`
 
 export default function App() {
   const relato = useRef<HTMLDivElement>(null)
@@ -228,6 +236,8 @@ export default function App() {
                   recorrer la página entera. */}
               {i === 0 && (
                 <div className={`mt-9 flex flex-wrap items-center gap-x-7 gap-y-4 ${c.lado === 'der' ? 'md:justify-end' : ''}`}>
+                  <BotonCV href={CV_ES}>CV Español</BotonCV>
+                  <BotonCV href={CV_EN}>CV English</BotonCV>
                   <Boton href="https://github.com/fleremiasflemin20-maker">GitHub</Boton>
                   <Boton href="https://www.linkedin.com/in/fleremahiaslenin" secundario>
                     LinkedIn
@@ -315,6 +325,8 @@ export default function App() {
             </dl>
 
             <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
+              <BotonCV href={CV_ES}>CV Español</BotonCV>
+              <BotonCV href={CV_EN}>CV English</BotonCV>
               <Boton href="https://github.com/fleremiasflemin20-maker">GitHub</Boton>
               <Boton href="https://www.linkedin.com/in/fleremahiaslenin">LinkedIn</Boton>
             </div>

@@ -38,7 +38,43 @@ export type Faceta = {
   habilidades: { nombre: string; nivel: number }[]
 }
 
+/*
+ * El orden importa: la que va primera es la que se ve al entrar, antes de
+ * que nadie toque la rueda. El turquesa de 3D e IA va delante a propósito
+ * —es el trabajo más nuevo y el que más conviene enseñar de entrada—, y
+ * software y producto quedan detrás en el mismo orden relativo que ya
+ * tenían. Nada más cambia: ni contenido, ni colores propios de cada una,
+ * solo el turno en que aparecen.
+ */
 export const FACETAS: Faceta[] = [
+  {
+    /*
+     * El tercer sector deja de ser la trayectoria hotelera y pasa a ser el
+     * cajón de proyectos en 3D e IA — figuras generadas con Meshy y
+     * herramientas parecidas, automatizaciones y piezas sueltas que no
+     * encajan como sitio web ni como producto. El id se queda igual de
+     * estable que los otros dos, solo que ahora describe un tipo de trabajo
+     * en vez de un puesto.
+     */
+    id: '3d',
+    clave: '3D',
+    nombre: '3D & IA',
+    papel: 'Modelado 3D · Automatización con IA',
+    descripcion:
+      'Figuras y objetos generados con Meshy y otras herramientas de IA, más automatizaciones y piezas sueltas que no encajan como sitio web ni como producto. Un cajón de proyectos, no una categoría cerrada — crece según se suman piezas.',
+    modelo: 'marina',
+    desde: '#00E5D1',
+    hasta: '#2AC3FF',
+    tinta: '#3BE0D0',
+    stats: [
+      { etiqueta: 'Modelado', valor: 'Meshy AI' },
+      { etiqueta: 'Automatización', valor: 'Agentes · workflows' },
+      { etiqueta: 'Estado', valor: 'En construcción' },
+    ],
+    // Vacío a propósito: nada de porcentajes inventados. Ver el aviso que
+    // Habilidades.tsx muestra cuando hay menos de tres.
+    habilidades: [],
+  },
   {
     id: 'software',
     clave: 'DEV',
@@ -85,33 +121,5 @@ export const FACETAS: Faceta[] = [
       { nombre: 'Arquitectura SaaS', nivel: 85 },
       { nombre: 'SQL / Bases de datos', nivel: 84 },
     ],
-  },
-  {
-    /*
-     * El tercer sector deja de ser la trayectoria hotelera y pasa a ser el
-     * cajón de proyectos en 3D e IA — figuras generadas con Meshy y
-     * herramientas parecidas, automatizaciones y piezas sueltas que no
-     * encajan como sitio web ni como producto. El id se queda igual de
-     * estable que los otros dos, solo que ahora describe un tipo de trabajo
-     * en vez de un puesto.
-     */
-    id: '3d',
-    clave: '3D',
-    nombre: '3D & IA',
-    papel: 'Modelado 3D · Automatización con IA',
-    descripcion:
-      'Figuras y objetos generados con Meshy y otras herramientas de IA, más automatizaciones y piezas sueltas que no encajan como sitio web ni como producto. Un cajón de proyectos, no una categoría cerrada — crece según se suman piezas.',
-    modelo: 'marina',
-    desde: '#00E5D1',
-    hasta: '#2AC3FF',
-    tinta: '#3BE0D0',
-    stats: [
-      { etiqueta: 'Modelado', valor: 'Meshy AI' },
-      { etiqueta: 'Automatización', valor: 'Agentes · workflows' },
-      { etiqueta: 'Estado', valor: 'En construcción' },
-    ],
-    // Vacío a propósito: nada de porcentajes inventados. Ver el aviso que
-    // Habilidades.tsx muestra cuando hay menos de tres.
-    habilidades: [],
   },
 ]

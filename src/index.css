@@ -55,6 +55,48 @@
 }
 
 @layer components {
+  /*
+   * El pulso ambiental de la rueda.
+   *
+   * Permanente y no solo al pasar el ratón: el problema es que nadie llega
+   * a pasar el ratón por ahí si nada le dice antes que merece la pena. Un
+   * resplandor que respira, en el color de la faceta activa, es la versión
+   * silenciosa de "esto se toca" — no interrumpe como un texto, pero
+   * tampoco deja la rueda leyéndose como un adorno fijo.
+   */
+  .rueda-pulso {
+    animation: pulsoRueda 2.6s ease-in-out infinite;
+  }
+
+  @keyframes pulsoRueda {
+    0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+    50% { filter: drop-shadow(0 0 9px var(--tinta, #3BE0D0)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rueda-pulso { animation: none }
+  }
+}
+
+@layer components {
+  /* La pista de texto sobre la rueda: un flotado suave para que no se lea
+     como una etiqueta pegada, sino como algo que está señalando hacia
+     abajo, hacia el sector que hay que tocar. */
+  .pista-rueda {
+    animation: flotaPista 1.6s ease-in-out infinite;
+  }
+
+  @keyframes flotaPista {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pista-rueda { animation: none }
+  }
+}
+
+@layer components {
   .rotulo {
     --borde: 0.035em;
     --tinta-borde: #0A0A12;
