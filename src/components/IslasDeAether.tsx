@@ -24,11 +24,11 @@ const CODIGO = 'https://github.com/fleremiasflemin20-maker/islas-de-aether'
 const VIVO = 'https://fleremiasflemin20-maker.github.io/islas-de-aether/'
 
 const DATOS: [string, string][] = [
-  ['Puntos en memoria', '~500 000'],
+  ['Puntos en memoria', 'hasta 1,1 M'],
   ['Sectores', 'infinitos'],
-  ['Regiones', '6 + confines'],
+  ['Regiones', '7 + confines'],
   ['Dependencias', 'ninguna'],
-  ['Peso total', '68 KB'],
+  ['Peso total', '84 KB'],
   ['Hilos', 'render en Worker'],
 ]
 
@@ -79,7 +79,8 @@ export function IslasDeAether() {
         <p className="mt-4 text-body text-paper/70">
           Un mundo de fantasía sin borde renderizado <strong className="text-paper">solo con caracteres</strong>. Sin
           texturas, sin mallas, sin WebGL: un canvas 2D dibujando glifos sobre una rejilla, con z-buffer propio,
-          luz calculada en tiempo real y sectores que se generan mientras vuelas.
+          luz calculada en tiempo real y sectores que se generan mientras vuelas. Puedes aterrizar y cruzar el
+          archipiélago a pie por los puentes, hasta la Ciudadela.
         </p>
       </header>
 

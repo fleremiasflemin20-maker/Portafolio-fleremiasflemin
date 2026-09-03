@@ -108,7 +108,7 @@
   <div>Hora <b id="clk">00:00</b></div>
   <div>Posición <b id="pos">0, 0</b></div>
   <div>Altitud <b id="alt">0</b> m</div>
-  <div>Faros <b id="faros">0/6</b></div>
+  <div>Faros <b id="faros">0/7</b></div>
   <div>Glifos <b id="gly">0</b></div>
   <div>Sectores <b id="sec">0</b></div>
   <div>Puntos <b id="pts">0k</b></div>
@@ -128,7 +128,7 @@
   <span><kbd>F</kbd> volar</span>
   <span><kbd>M</kbd> mapa</span>
   <span><kbd>N</kbd> audio</span>
-  <span><kbd>1</kbd>–<kbd>6</kbd> viajar</span>
+  <span><kbd>1</kbd>–<kbd>7</kbd> viajar</span>
   <span><kbd>T</kbd> hora</span>
   <span><kbd>H</kbd> motor</span>
 </div>
@@ -144,7 +144,7 @@
 
 <div id="mapwrap" hidden>
   <canvas id="map" width="900" height="900"></canvas>
-  <div id="mapfoot">M cerrar · 1–6 viajar a una región</div>
+  <div id="mapfoot">M cerrar · 1–7 viajar a una región</div>
 </div>
 
 <div id="boot">
@@ -155,7 +155,7 @@
 
 <div id="engine" hidden>
   <h2>Cómo se hace un mundo de caracteres</h2>
-  <p class="sub">Siete piezas y un hilo aparte</p>
+  <p class="sub">Ocho piezas y un hilo aparte</p>
   <ol>
     <li><div><strong>Nube de puntos, no polígonos.</strong> Cada punto lleva posición, normal, material y oclusión. Islas, quillas colgando, troncos, copas, agujas, casas huecas y puentes con catenaria salen de ruido con semilla.</div></li>
     <li><div><strong>Proyección en perspectiva.</strong> Se rota a espacio de cámara y se divide entre la profundidad: <code>x/z</code>, <code>y/z</code>. Hay que corregir que la celda de texto es más alta que ancha, o todo sale estirado.</div></li>
@@ -163,6 +163,7 @@
     <li><div><strong>Luz de verdad, no horneada.</strong> Cada punto guarda su normal en tres bytes. El sombreado se calcula en cada fotograma contra la dirección del sol — o de la luna —, así que las laderas se encienden y se apagan según la hora, y el rebote del cielo llega por arriba. Encima va una oclusión ambiental precalculada con una rejilla de ocupación: los huecos y las grietas se oscurecen solos.</div></li>
     <li><div><strong>Un mundo sin borde.</strong> No hay mapa fijo: el espacio se divide en sectores de 220 unidades y cada uno se genera cuando te acercas, a partir de <code>hash(sx, sz, semilla)</code>. Las seis regiones con nombre solo suben la densidad donde caen. Los sectores lejanos se desalojan. Con <code>?semilla=</code> en la URL cambias de mundo entero.</div></li>
     <li><div><strong>Todo eso vive en un Worker.</strong> Generación y proyección corren fuera del hilo principal y devuelven la rejilla ya resuelta en buffers transferibles que van y vienen sin copiarse. El hilo principal solo pinta, suena y juega — por eso generar sectores nuevos no da tirones.</div></li>
+    <li><div><strong>Caminos que se pueden pisar.</strong> Cada isla tiende un puente a su vecina más cercana del vecindario de nueve sectores. Como las dos hacen la misma cuenta, el par se dibuja una sola vez — lo pone quien tiene la clave menor — y los dos extremos coinciden aunque cada sector nazca en un momento distinto. Al andar, la baranda empuja: sin eso, un tablero de 4,4 de ancho se cruza una vez de cada cinco.</div></li>
     <li><div><strong>Y se pinta en tiras.</strong> Cada fila agrupa celdas contiguas del mismo color en una cadena y se dibuja de un golpe: de ~10.000 celdas a unos cientos de llamadas.</div></li>
   </ol>
   <div class="close">Pulsa H para volver al vuelo</div>
@@ -195,9 +196,56 @@ function relief(x, z) {
          Math.sin(z * 0.41 + x * 0.05) * 0.7;
 }
 
-var REGIONS = [], WILD = null, SEED = 1, SECTOR = 180, DENS = 0.52;
-var sectors = new Map();          // clave "sx,sz" -> sector
+var REGIONS = [], WILD = null, SEED = 1, SECTOR = 180, QUAL = 1, DENS = 0.52, FP = 0.56, CAP = 900000;
+var sectors = new Map();          // clave "sx,sz" -> sector construido
+var plan = new Map();             // clave "sx,sz" -> islas planificadas (sin puntos)
 var queue = [];                   // sectores pendientes de generar
+var CIT = null;                   // la Ciudadela: isla única, sitio fijo
+
+/* ---------- dónde cae cada isla, sin construir nada ----------
+   Hace falta por separado: para tender un puente hasta la isla vecina hay que
+   saber dónde está antes de que ese sector exista. Es barato — unas cuentas y
+   ya — y determinista, así que los dos extremos del puente coinciden aunque
+   cada sector se genere en un momento distinto. */
+function sectorIslands(sx, sz) {
+  var key = sx + "," + sz;
+  var got = plan.get(key);
+  if (got) return got;
+  var rnd = mulberry(hash2(sx, sz, SEED));
+  var cx0 = sx * SECTOR, cz0 = sz * SECTOR;
+  var list = [];
+
+  if (CIT && sx === CIT.sx && sz === CIT.sz) {
+    list.push({ x: CIT.x, y: CIT.y, z: CIT.z, r: CIT.r, reg: CIT.reg, fort: true, sx: sx, sz: sz, i: 0 });
+    plan.set(key, list);
+    return list;
+  }
+
+  var ri = regionAt(cx0 + SECTOR / 2, cz0 + SECTOR / 2);
+  var howMany = ri >= 0 ? 2 + ((hash2(sx, sz, SEED + 7) >>> 3) % 3) : (rnd() < 0.8 ? 1 : 0);
+  for (var k = 0; k < howMany; k++) {
+    var ix = cx0 + rnd() * SECTOR, iz = cz0 + rnd() * SECTOR;
+    var kri = regionAt(ix, iz);
+    var KR = paramsFor(kri);
+    var size = KR.rMin + (KR.rMax - KR.rMin) * Math.pow(rnd(), 1.5);
+    var iy = (KR.cy !== undefined ? KR.cy : 0) + (rnd() - 0.5) * 40;
+    // nada se planta encima de la Ciudadela
+    if (CIT && Math.hypot(ix - CIT.x, iz - CIT.z) < CIT.r + 70) continue;
+    list.push({ x: ix, y: iy, z: iz, r: size, reg: kri < 0 ? REGIONS.length : kri, fort: false, sx: sx, sz: sz, i: k });
+  }
+  plan.set(key, list);
+  return list;
+}
+
+/* Las islas de este sector y de los ocho de alrededor: el vecindario en el que
+   se busca a quién tender el puente. */
+function neighbourhood(sx, sz) {
+  var all = [];
+  for (var dz = -1; dz <= 1; dz++) for (var dx = -1; dx <= 1; dx++)
+    all = all.concat(sectorIslands(sx + dx, sz + dz));
+  return all;
+}
+function islandKey(I) { return I.sx * 1000003 + I.sz * 1009 + I.i; }
 
 /* qué región manda en un punto del mapa: la más cercana dentro de su radio,
    y si ninguna alcanza, los Confines */
@@ -218,6 +266,7 @@ function buildSector(sx, sz) {
 
   var P = { x: [], y: [], z: [], nx: [], ny: [], nz: [], m: [], a: [] };
   var islands = [];
+  var bridges = [];
 
   function add(x, y, z, ax, ay, az, m) {
     var L = Math.hypot(ax, ay, az) || 1;
@@ -277,7 +326,160 @@ function buildSector(sx, sz) {
     }
   }
 
-  function island(ri, cx, cy, cz, Rr) {
+  /* ================= LA CIUDADELA =================
+     Fortaleza gótica original: muralla octogonal con torres en cada vértice,
+     casa de puertas, patio y un torreón escalonado con agujas. Todo son
+     primitivas —muro, torre, caja hueca— porque en ASCII lo que se lee es la
+     silueta: masas grandes, almenas marcadas y verticales altas. */
+  function almenar(x, z, y, nx, nz, M0) {           // dientes sobre un muro
+    for (var a2 = 0; a2 < 5; a2++) add(x, y + a2 * 0.4, z, nx, 0.3, nz, M0);
+  }
+  function muro(x1, z1, x2, z2, yb, h, th, M0, hueco) {
+    var dx = x2 - x1, dz = z2 - z1, L = Math.hypot(dx, dz);
+    var ux = dx / L, uz = dz / L, nx = -uz, nz = ux;
+    var paso = FP;
+    for (var s2 = 0; s2 <= L; s2 += paso) {
+      var t2 = s2 / L;
+      // el hueco de la puerta: un arco en mitad del tramo
+      var cen = Math.abs(s2 - L / 2);
+      var arco = hueco ? Math.max(0, hueco * Math.sqrt(Math.max(0, 1 - (cen / hueco) * (cen / hueco))) * 1.15) : 0;
+      var px2 = x1 + ux * s2, pz2 = z1 + uz * s2;
+      for (var yy = 0; yy <= h; yy += paso) {
+        if (yy < arco) continue;
+        for (var side = -1; side <= 1; side += 2)
+          add(px2 + nx * side * th, yb + yy, pz2 + nz * side * th, nx * side, 0.05, nz * side, M0);
+      }
+      for (var wq3 = -th; wq3 <= th; wq3 += paso)   // adarve
+        add(px2 + nx * wq3, yb + h, pz2 + nz * wq3, 0, 1, 0, M0);
+      if (((s2 / paso) | 0) % 6 < 3) almenar(px2, pz2, yb + h, nx, nz, M0);
+      if (arco === 0 && ((s2 / paso) | 0) % 22 === 0)   // saeteras encendidas
+        for (var lv = 0; lv < 5; lv++)
+          add(px2 + nx * th * 1.05, yb + h * 0.45 + lv * 0.4, pz2 + nz * th * 1.05, nx, 0, nz, M0 + 3);
+    }
+  }
+  function torre(cx2, cz2, r2, yb, h, M0, aguja) {
+    var paso = FP, pasoA = paso / r2;
+    for (var yy = 0; yy <= h; yy += paso)
+      for (var a3 = 0; a3 < TAU; a3 += pasoA) {
+        var ca = Math.cos(a3), sa = Math.sin(a3);
+        add(cx2 + ca * r2, yb + yy, cz2 + sa * r2, ca, 0.05, sa, M0);
+      }
+    for (var rr3 = 0; rr3 <= r2; rr3 += paso)      // techo
+      for (var a4 = 0; a4 < TAU; a4 += Math.max(0.12, paso / Math.max(rr3, 0.6)))
+        add(cx2 + Math.cos(a4) * rr3, yb + h, cz2 + Math.sin(a4) * rr3, 0, 1, 0, M0);
+    for (var a5 = 0; a5 < TAU; a5 += 0.42)         // almenas
+      almenar(cx2 + Math.cos(a5) * r2, cz2 + Math.sin(a5) * r2, yb + h, Math.cos(a5), Math.sin(a5), M0);
+    if (aguja) {
+      var ha = r2 * 2.4;
+      for (var s3 = 0; s3 < ha; s3 += FP * 0.75) {
+        var t3 = s3 / ha, rw = r2 * (1 - t3) * 0.95;
+        for (var a6 = 0; a6 < TAU; a6 += Math.max(0.18, 0.5 / Math.max(rw, 0.5)))
+          add(cx2 + Math.cos(a6) * rw, yb + h + 1.2 + s3, cz2 + Math.sin(a6) * rw, Math.cos(a6), 0.55, Math.sin(a6), M0 + 2);
+      }
+    }
+  }
+  function cajaHueca(cx2, cz2, w2, d2, yb, h, M0, ventanas) {
+    var paso = FP * 1.15;
+    for (var yy = 0; yy <= h; yy += paso) {
+      for (var s4 = -w2; s4 <= w2; s4 += paso) {
+        add(cx2 + s4, yb + yy, cz2 - d2, 0, 0.05, -1, M0);
+        add(cx2 + s4, yb + yy, cz2 + d2, 0, 0.05, 1, M0);
+      }
+      for (var s5 = -d2; s5 <= d2; s5 += paso) {
+        add(cx2 - w2, yb + yy, cz2 + s5, -1, 0.05, 0, M0);
+        add(cx2 + w2, yb + yy, cz2 + s5, 1, 0.05, 0, M0);
+      }
+    }
+    for (var sx4 = -w2; sx4 <= w2; sx4 += paso)
+      for (var sz4 = -d2; sz4 <= d2; sz4 += paso)
+        add(cx2 + sx4, yb + h, cz2 + sz4, 0, 1, 0, M0);
+    if (ventanas) for (var fila = 0; fila < 5; fila++) {
+      var yv = yb + h * (0.25 + fila * 0.15);
+      for (var col = -3; col <= 3; col++) {
+        for (var lv2 = 0; lv2 < 4; lv2++) {
+          add(cx2 + col * (w2 / 3.4), yv + lv2 * 0.42, cz2 - d2 * 1.03, 0, 0, -1, M0 + 3);
+          add(cx2 + col * (w2 / 3.4), yv + lv2 * 0.42, cz2 + d2 * 1.03, 0, 0, 1, M0 + 3);
+          add(cx2 - w2 * 1.03, yv + lv2 * 0.42, cz2 + col * (d2 / 3.4), -1, 0, 0, M0 + 3);
+          add(cx2 + w2 * 1.03, yv + lv2 * 0.42, cz2 + col * (d2 / 3.4), 1, 0, 0, M0 + 3);
+        }
+      }
+    }
+  }
+
+  function fortaleza(M0, cx, cy, cz, Rr) {
+    var yb = cy + 1;
+    var RW = Rr * 0.62;                       // radio de la muralla
+    var N8 = 8, verts = [];
+    for (var v = 0; v < N8; v++) {
+      var a7 = (v / N8) * TAU + Math.PI / N8;
+      verts.push([cx + Math.cos(a7) * RW, cz + Math.sin(a7) * RW]);
+    }
+    for (var v2 = 0; v2 < N8; v2++) {
+      var A3 = verts[v2], B3 = verts[(v2 + 1) % N8];
+      muro(A3[0], A3[1], B3[0], B3[1], yb, 15, 1.3, M0, v2 === 0 ? 5.5 : 0);
+    }
+    for (var v3 = 0; v3 < N8; v3++) torre(verts[v3][0], verts[v3][1], 5.2, yb, 26, M0, true);
+
+    // casa de puertas: dos torres mayores flanqueando el tramo abierto
+    var g0 = verts[0], g1 = verts[1];
+    var gmx = (g0[0] + g1[0]) / 2, gmz = (g0[1] + g1[1]) / 2;
+    var gdx = g1[0] - g0[0], gdz = g1[1] - g0[1], gl = Math.hypot(gdx, gdz);
+    torre(gmx - gdx / gl * 7.5, gmz - gdz / gl * 7.5, 6.6, yb, 34, M0, true);
+    torre(gmx + gdx / gl * 7.5, gmz + gdz / gl * 7.5, 6.6, yb, 34, M0, true);
+
+    // calzada de entrada, del portón al borde de la isla
+    var ox = gmx - cx, oz = gmz - cz, ol = Math.hypot(ox, oz);
+    for (var s6 = 0; s6 < Rr - RW; s6 += FP) {
+      var qx2 = gmx + ox / ol * s6, qz2 = gmz + oz / ol * s6;
+      for (var wq4 = -3; wq4 <= 3; wq4 += FP)
+        add(qx2 - oz / ol * wq4, yb - 0.6, qz2 + ox / ol * wq4, 0, 1, 0, M0);
+    }
+
+    // patio empedrado
+    for (var rr4 = 12; rr4 < RW - 1.5; rr4 += FP * 1.6)
+      for (var a8 = 0; a8 < TAU; a8 += (FP * 1.6) / rr4)
+        add(cx + Math.cos(a8) * rr4, yb - 0.6, cz + Math.sin(a8) * rr4, 0, 1, 0, M0);
+
+    // torreón escalonado
+    cajaHueca(cx, cz, 15, 15, yb, 40, M0, true);
+    cajaHueca(cx, cz, 9.5, 9.5, yb + 40, 15, M0, true);
+    for (var q4 = 0; q4 < 4; q4++) {                 // torres del torreón
+      var sgx = q4 < 2 ? -1 : 1, sgz = q4 % 2 ? -1 : 1;
+      torre(cx + sgx * 13.5, cz + sgz * 13.5, 4.2, yb, 62, M0, true);
+    }
+    // aguja central
+    for (var s7 = 0; s7 < 26; s7 += FP * 0.7) {
+      var t7 = s7 / 26, rw2 = 8.5 * (1 - t7);
+      for (var a9 = 0; a9 < TAU; a9 += Math.max(0.16, 0.5 / Math.max(rw2, 0.5)))
+        add(cx + Math.cos(a9) * rw2, yb + 55 + s7, cz + Math.sin(a9) * rw2, Math.cos(a9), 0.6, Math.sin(a9), M0 + 2);
+    }
+    // estandartes colgando del torreón
+    for (var bnd = 0; bnd < 8; bnd++) {
+      var ab = (bnd / 8) * TAU, bxp = cx + Math.cos(ab) * 15.6, bzp = cz + Math.sin(ab) * 15.6;
+      for (var hb = 0; hb < 26; hb += FP * 0.95)
+        for (var wb = -1.4; wb <= 1.4; wb += FP)
+          add(bxp - Math.sin(ab) * wb, yb + 36 - hb, bzp + Math.cos(ab) * wb, Math.cos(ab), 0, Math.sin(ab), M0 + 2);
+    }
+    // arbotantes del torreón a la muralla
+    for (var ar = 0; ar < 8; ar++) {
+      var aa2 = (ar / 8) * TAU + 0.39;
+      for (var s8 = 0; s8 <= 1; s8 += 0.012 * FP / 0.5) {
+        var rad2 = 16 + (RW - 17) * s8;
+        var yarc = yb + 30 - Math.sin(s8 * Math.PI) * 6 - s8 * 13;
+        for (var wq5 = -0.6; wq5 <= 0.6; wq5 += FP)
+          add(cx + Math.cos(aa2) * rad2 - Math.sin(aa2) * wq5, yarc, cz + Math.sin(aa2) * rad2 + Math.cos(aa2) * wq5, Math.cos(aa2), 0.5, Math.sin(aa2), M0);
+      }
+    }
+    // faroles del patio
+    for (var lp = 0; lp < 16; lp++) {
+      var al = (lp / 16) * TAU, lx = cx + Math.cos(al) * (RW - 6), lz2 = cz + Math.sin(al) * (RW - 6);
+      for (var hl = 0; hl < 12; hl++) add(lx, yb + hl * 0.32, lz2, Math.cos(al), 0.2, Math.sin(al), M0 + 7);
+      for (var gl2 = 0; gl2 < 14; gl2++)
+        add(lx + (rnd() - .5) * .8, yb + 4.2 + (rnd() - .5) * .8, lz2 + (rnd() - .5) * .8, 0, 1, 0, M0 + 3);
+    }
+  }
+
+  function island(ri, cx, cy, cz, Rr, fort) {
     var R = paramsFor(ri), M0 = (ri < 0 ? REGIONS.length : ri) * 8;
     var i, j, s, a, x, z, y, n, tt, rr, w;
     islands.push({ x: cx, y: cy, z: cz, r: Rr, depth: Rr * 1.9, reg: ri < 0 ? REGIONS.length : ri });
@@ -290,9 +492,9 @@ function buildSector(sx, sz) {
         a = (j / count) * TAU + rnd() * 0.25;
         x = cx + Math.cos(a) * rr; z = cz + Math.sin(a) * rr;
         var edge = rr / Rr;
-        y = cy + relief(x, z) * (1 - edge * 0.6) - edge * edge * 2.2;
-        var nn = surfaceNormal(x, z);
-        var rock = edge > 0.80 || rnd() < 0.10;
+        y = cy + relief(x, z) * (fort ? 0.12 : 1) * (1 - edge * 0.6) - edge * edge * 2.2;
+        var nn = fort ? [0, 1, 0] : surfaceNormal(x, z);
+        var rock = fort ? rnd() < 0.72 : (edge > 0.80 || rnd() < 0.10);
         add(x, y, z, nn[0], nn[1], nn[2], M0 + (rock ? 0 : 1));
       }
     }
@@ -303,6 +505,7 @@ function buildSector(sx, sz) {
       add(cx + Math.cos(a) * rr, cy - 1.2 - Math.pow(tt, 1.4) * (Rr * 1.7), cz + Math.sin(a) * rr,
           Math.cos(a), -0.75 - tt, Math.sin(a), M0);
     }
+    if (fort) { fortaleza(M0, cx, cy, cz, Rr); return; }
     for (i = 0, n = Math.round(Rr * 0.55); i < n; i++) {
       a = rnd() * TAU; rr = Rr * 0.78 * Math.sqrt(rnd());
       x = cx + Math.cos(a) * rr; z = cz + Math.sin(a) * rr;
@@ -347,37 +550,99 @@ function buildSector(sx, sz) {
     }
   }
 
-  /* cuántas islas caen en este sector: densidad alta dentro de una región,
-     dispersa en los Confines. El resultado depende solo de (sx, sz, semilla),
-     así que el mundo es el mismo cada vez que vuelves. */
-  var ri = regionAt(cx0 + SECTOR / 2, cz0 + SECTOR / 2);
-  var R0 = paramsFor(ri);
-  var howMany = ri >= 0 ? 2 + ((hash2(sx, sz, SEED + 7) >>> 3) % 3) : (rnd() < 0.8 ? 1 : 0);
-  for (var k = 0; k < howMany; k++) {
-    var ix = cx0 + rnd() * SECTOR, iz = cz0 + rnd() * SECTOR;
-    var kri = regionAt(ix, iz);
-    var KR = paramsFor(kri);
-    var size = KR.rMin + (KR.rMax - KR.rMin) * Math.pow(rnd(), 1.5);
-    var iy = (KR.cy !== undefined ? KR.cy : 0) + (rnd() - 0.5) * 40;
-    island(kri, ix, iy, iz, size);
+  /* ---------- las islas de este sector ---------- */
+  var mine = sectorIslands(sx, sz);
+  for (var k = 0; k < mine.length; k++) {
+    var MI = mine[k];
+    island(MI.reg === REGIONS.length ? -1 : MI.reg, MI.x, MI.y, MI.z, MI.r, MI.fort);
   }
 
-  /* puentes entre islas cercanas del mismo sector */
-  for (var b = 1; b < islands.length; b++) {
-    var A = islands[b - 1], B = islands[b];
-    var dx = B.x - A.x, dy = B.y - A.y, dz = B.z - A.z, L = Math.hypot(dx, dz);
-    if (L > 110 || rnd() < 0.4) continue;
+  /* ---------- caminos ----------
+     Cada isla tiende un puente a su vecina más cercana del vecindario 3x3. Como
+     las dos calculan lo mismo, el par se dibuja una sola vez: lo pone quien
+     tiene la clave menor. Eso deja un grafo del vecino más próximo — conectado
+     pero en forma de árbol —, así que una de cada tres islas tira además un
+     segundo puente al siguiente más cercano y aparecen circuitos.
+     Los puntos del puente pueden caer en el sector de al lado; la esfera
+     envolvente del sector ya se calcula sobre los puntos reales, así que el
+     recorte lo tiene en cuenta. */
+  var around = neighbourhood(sx, sz);
+  function tender(A, B) {
     var M0b = A.reg * 8;
-    var ax = A.x + (dx / L) * A.r * 0.95, az = A.z + (dz / L) * A.r * 0.95;
-    var bx = B.x - (dx / L) * B.r * 0.95, bz = B.z - (dz / L) * B.r * 0.95;
-    var nseg = Math.round(L * 6);
+    var dx = B.x - A.x, dy = B.y - A.y, dz = B.z - A.z, L = Math.hypot(dx, dz);
+    if (L < 1) return;
+    var ux = dx / L, uz = dz / L;
+    var ax = A.x + ux * (A.r - 1.5), az = A.z + uz * (A.r - 1.5);
+    var bx = B.x - ux * (B.r - 1.5), bz = B.z - uz * (B.r - 1.5);
+    var span = Math.hypot(bx - ax, bz - az);
+    if (span < 2) return;
+    var ay = A.y + relief(ax, az) * 0.4, by = B.y + relief(bx, bz) * 0.4;
+    var sag = Math.min(span * 0.07, 9);
+    var W = 2.2;                                    // media anchura del tablero
+    var nseg = Math.max(8, Math.round(span * 3.2));
     for (var q = 0; q <= nseg; q++) {
-      var t2 = q / nseg, sag = Math.sin(t2 * Math.PI) * (L * 0.10);
-      var px2 = ax + (bx - ax) * t2, pz2 = az + (bz - az) * t2, py2 = A.y + dy * t2 - sag;
-      for (var wq = -1; wq <= 1; wq++)
-        add(px2 + (dz / L) * wq * 0.5, py2, pz2 - (dx / L) * wq * 0.5, 0, 1, 0, M0b + 7);
-      if (q % 9 === 0) for (var s2 = 0; s2 < 4; s2++) add(px2, py2 + 0.4 + s2 * 0.5, pz2, 0, 1, 0, M0b + 7);
+      var tt = q / nseg;
+      var px2 = ax + (bx - ax) * tt, pz2 = az + (bz - az) * tt;
+      var py2 = ay + (by - ay) * tt - Math.sin(tt * Math.PI) * sag;
+      // tablero: tres tablones a lo ancho
+      for (var wq = -1; wq <= 1; wq += 0.5)
+        add(px2 - uz * wq * W, py2, pz2 + ux * wq * W, 0, 1, 0, M0b + 7);
+      // barandas
+      if (q % 2 === 0) for (var side = -1; side <= 1; side += 2) {
+        for (var hgt = 1; hgt <= 3; hgt++)
+          add(px2 - uz * side * (W + 0.35), py2 + hgt * 0.42, pz2 + ux * side * (W + 0.35), -uz * side, 0.2, ux * side, M0b + 7);
+      }
+      // postes con farol, de tanto en tanto
+      if (q % 14 === 0 && q > 0 && q < nseg) {
+        for (var side2 = -1; side2 <= 1; side2 += 2) {
+          for (var hh2 = 0; hh2 < 9; hh2++)
+            add(px2 - uz * side2 * (W + 0.35), py2 + hh2 * 0.3, pz2 + ux * side2 * (W + 0.35), -uz * side2, 0.2, ux * side2, M0b + 7);
+          for (var lz = 0; lz < 10; lz++)
+            add(px2 - uz * side2 * (W + 0.35) + (rnd() - .5) * .7, py2 + 3 + (rnd() - .5) * .7, pz2 + ux * side2 * (W + 0.35) + (rnd() - .5) * .7, 0, 1, 0, M0b + 3);
+        }
+      }
     }
+    // sendero de piedra desde el anclaje hacia el interior de la isla
+    for (var e = 0; e < 2; e++) {
+      var I2 = e ? B : A, sgn = e ? -1 : 1;
+      var sxp = e ? bx : ax, szp = e ? bz : az;
+      var pasos = Math.round(I2.r * 0.55);
+      for (var pp = 0; pp < pasos; pp++) {
+        var f2 = pp / pasos;
+        var qx = sxp - sgn * ux * (I2.r * 0.55) * f2, qz = szp - sgn * uz * (I2.r * 0.55) * f2;
+        var edge2 = Math.min(1, Math.hypot(qx - I2.x, qz - I2.z) / I2.r);
+        var qy = I2.y + relief(qx, qz) * (1 - edge2 * 0.6) - edge2 * edge2 * 2.2 + 0.12;
+        for (var wq2 = -1; wq2 <= 1; wq2++)
+          add(qx - uz * wq2 * 1.5, qy, qz + ux * wq2 * 1.5, 0, 1, 0, I2.reg * 8);
+      }
+    }
+    bridges.push(ax, ay, az, bx, by, bz, sag, W);
+  }
+
+  for (var b = 0; b < mine.length; b++) {
+    var A2 = mine[b];
+    var best = null, bd = 1e9, best2 = null, bd2 = 1e9;
+    for (var c2 = 0; c2 < around.length; c2++) {
+      var C = around[c2];
+      if (C === A2 || (C.sx === A2.sx && C.sz === A2.sz && C.i === A2.i)) continue;
+      var dd = Math.hypot(C.x - A2.x, C.z - A2.z) - C.r - A2.r;
+      if (dd > 260) continue;
+      if (dd < bd) { bd2 = bd; best2 = best; bd = dd; best = C; }
+      else if (dd < bd2) { bd2 = dd; best2 = C; }
+    }
+    if (!best) continue;
+    // el par lo dibuja quien tiene la clave menor, para no duplicarlo
+    var mutuo = null, mb = 1e9;
+    for (var c3 = 0; c3 < around.length; c3++) {
+      var D = around[c3];
+      if (D.sx === best.sx && D.sz === best.sz && D.i === best.i) continue;
+      var dd2 = Math.hypot(D.x - best.x, D.z - best.z) - D.r - best.r;
+      if (dd2 < mb) { mb = dd2; mutuo = D; }
+    }
+    var esMutuo = mutuo && mutuo.sx === A2.sx && mutuo.sz === A2.sz && mutuo.i === A2.i;
+    if (!esMutuo || islandKey(A2) < islandKey(best)) tender(A2, best);
+    if (best2 && bd2 < 190 && (hash2(islandKey(A2), islandKey(best2), SEED + 31) >>> 5) % 3 === 0
+        && islandKey(A2) < islandKey(best2)) tender(A2, best2);
   }
 
   /* ---------- oclusión ambiental: rejilla de ocupación del sector ---------- */
@@ -434,24 +699,30 @@ function buildSector(sx, sz) {
     key: key, sx: sx, sz: sz, n: n, X: QX, Y: QY, Z: QZ, N: QN, M: QM, A: QA,
     cx: (bx0 + bx1) / 2, cy: (by0 + by1) / 2, cz: (bz0 + bz1) / 2,
     rad: n ? 0.5 * Math.hypot(bx1 - bx0, by1 - by0, bz1 - bz0) + 1 : 0,
-    islands: islands, used: 0
+    islands: islands, bridges: new Float32Array(bridges), used: 0, seen: 0
   };
   sectors.set(key, sec);
   return sec;
 }
 
 /* ---------- qué sectores hacen falta alrededor de la cámara ---------- */
+/* `used` solo se marca en el núcleo cercano. Lo de más allá se conserva
+   mientras sea visible (lo marca el render con `seen`), y en cuanto sobra
+   memoria se desaloja lo que lleva más tiempo sin verse ni pisarse. Marcar
+   todo lo generado como "en uso" dejaba la caché intocable y el tope de
+   puntos no servía de nada. */
+var NUCLEO = 330;
 function ensureSectors(camx, camz, far, tick) {
-  var r = Math.ceil((far + SECTOR) / SECTOR);
+  var r = Math.ceil((far * 0.88 + SECTOR) / SECTOR);
   var csx = Math.floor(camx / SECTOR), csz = Math.floor(camz / SECTOR);
   queue.length = 0;
   for (var dz = -r; dz <= r; dz++) for (var dx = -r; dx <= r; dx++) {
     var sx = csx + dx, sz = csz + dz;
     var d = Math.hypot((sx + 0.5) * SECTOR - camx, (sz + 0.5) * SECTOR - camz);
-    if (d > far + SECTOR) continue;
+    if (d > far * 0.88 + SECTOR) continue;
     var key = sx + "," + sz;
     var s = sectors.get(key);
-    if (s) { s.used = tick; continue; }
+    if (s) { if (d < NUCLEO) s.used = tick; continue; }
     queue.push([d, sx, sz]);
   }
   queue.sort(function (a, b) { return a[0] - b[0]; });
@@ -460,12 +731,19 @@ function ensureSectors(camx, camz, far, tick) {
     buildSector(queue[i][1], queue[i][2]).used = tick;
     budget--;
   }
-  // desalojar lo que ya no se usa
-  if (sectors.size > 90) {
+  /* Desalojo por PUNTOS, no por número de sectores: la Ciudadela sola pesa lo
+     que veinte sectores normales, y contar sectores dejaba la memoria al doble
+     de lo previsto. Nunca se tira lo que se usó en este fotograma. */
+  var vivos = 0;
+  sectors.forEach(function (s2) { vivos += s2.n; });
+  if (vivos > CAP) {
     var olds = [];
-    sectors.forEach(function (s2, k) { if (s2.used < tick - 30) olds.push([s2.used, k]); });
+    sectors.forEach(function (s2, k) {
+      var last = s2.used > s2.seen ? s2.used : s2.seen;
+      if (last < tick) olds.push([last, k, s2.n]);
+    });
     olds.sort(function (a, b) { return a[0] - b[0]; });
-    for (var j = 0; j < olds.length && sectors.size > 70; j++) sectors.delete(olds[j][1]);
+    for (var j = 0; j < olds.length && vivos > CAP; j++) { sectors.delete(olds[j][1]); vivos -= olds[j][2]; }
   }
 }
 
@@ -488,9 +766,11 @@ function render(msg) {
   z.fill(0); s.fill(0);
 
   var visible = 0, touched = 0, live = 0;
-  var isl = [];
+  var isl = [], brd = [];
   sectors.forEach(function (sec) {
     live += sec.n;
+    if (sec.bridges.length && Math.abs(sec.cx - cam[0]) < 700 && Math.abs(sec.cz - cam[2]) < 700)
+      for (var w2 = 0; w2 < sec.bridges.length; w2++) brd.push(sec.bridges[w2]);
     for (var q = 0; q < sec.islands.length; q++) {
       var I = sec.islands[q];
       if (Math.abs(I.x - cam[0]) < 900 && Math.abs(I.z - cam[2]) < 900) isl.push(I);
@@ -503,7 +783,7 @@ function render(msg) {
       var cosang = (dx * fwd[0] + dy * fwd[1] + dz * fwd[2]) / dist;
       if (Math.acos(clamp(cosang, -1, 1)) - Math.asin(clamp(cr / dist, 0, 1)) > halfFov) return;
     }
-    visible++;
+    visible++; sec.seen = tick;
     var near = dist - cr;
     var stride = near < 210 ? 1 : near < 340 ? 2 : near < 460 ? 4 : 8;
     var X = sec.X, Y = sec.Y, Z = sec.Z, NN = sec.N, MM = sec.M, AA = sec.A, n = sec.n;
@@ -542,20 +822,24 @@ function render(msg) {
     }
   });
 
+  var flatB = new Float32Array(brd);
   var flat = new Float32Array(isl.length * 5);
   for (var a = 0; a < isl.length; a++) {
     flat[a*5] = isl[a].x; flat[a*5+1] = isl[a].y; flat[a*5+2] = isl[a].z;
     flat[a*5+3] = isl[a].r; flat[a*5+4] = isl[a].reg;
   }
-  self.postMessage({ t: "g", z: z, m: m, s: s, isl: flat,
+  self.postMessage({ t: "g", z: z, m: m, s: s, isl: flat, brd: flatB,
     stats: { sectors: sectors.size, visible: visible, live: live, touched: touched } },
-    [z.buffer, m.buffer, s.buffer, flat.buffer]);
+    [z.buffer, m.buffer, s.buffer, flat.buffer, flatB.buffer]);
 }
 
 self.onmessage = function (e) {
   var d = e.data;
-  if (d.t === "init") { REGIONS = d.regions; WILD = d.wild; SEED = d.seed; sectors.clear(); return; }
-  if (d.t === "seed") { SEED = d.seed; sectors.clear(); return; }
+  if (d.t === "init") { REGIONS = d.regions; WILD = d.wild; SEED = d.seed; CIT = d.citadel;
+    QUAL = d.qual || 1; DENS = 0.52 * QUAL; FP = 0.56 / QUAL; CAP = d.cap || 900000;
+    if (CIT) { CIT.sx = Math.floor(CIT.x / SECTOR); CIT.sz = Math.floor(CIT.z / SECTOR); }
+    sectors.clear(); plan.clear(); return; }
+  if (d.t === "seed") { SEED = d.seed; sectors.clear(); plan.clear(); return; }
   if (d.t === "f") render(d);
 };
 </script>
@@ -595,8 +879,18 @@ self.onmessage = function (e) {
     { name:"Abismo", sub:"lo que quedó debajo", cx:-700, cz:250, cy:-62, span:155, rMin:7, rMax:23,
       flora:"shroom", houses:false, spires:4, glow:{1:0.85,2:0.9,4:0.45},
       skyNight:[2,4,8], skyDay:[8,16,26],
-      mats:[[70,74,104],[90,255,214],[130,120,255],[180,255,240],[110,200,255],[200,120,255],[190,200,240],[58,60,86]] }
+      mats:[[70,74,104],[90,255,214],[130,120,255],[180,255,240],[110,200,255],[200,120,255],[190,200,240],[58,60,86]] },
+    /* La Ciudadela: una sola isla, cuatro veces mayor que cualquier otra, con
+       una fortaleza encima. Piedra fría, verdín en las juntas y luz de hogar en
+       las ventanas — el contraste es lo que la hace legible de lejos. */
+    { name:"Ciudadela", sub:"la fortaleza de una sola isla", cx:-120, cz:-560, cy:6, span:250, rMin:60, rMax:78,
+      flora:"dead", houses:false, spires:0, glow:{2:0.8,3:0.55},
+      skyNight:[7,7,12], skyDay:[34,38,50],
+      mats:[[142,140,152],[104,132,110],[176,206,226],[255,198,120],[176,196,214],[214,120,120],[224,228,240],[96,92,96]] }
   ];
+  /* La isla gigante no se sortea: está siempre en el mismo sitio, y ningún
+     sector deja caer nada encima. */
+  const CITADEL = { x: -120, y: 6, z: -560, r: 78, reg: 6 };
   const WILD = { name:"Confines", sub:"lo que nadie cartografió", cy:0, rMin:7, rMax:22,
     flora:"tree", houses:false, spires:1, glow:{2:0.6},
     skyNight:[5,6,11], skyDay:[24,34,48],
@@ -639,7 +933,7 @@ self.onmessage = function (e) {
     const q = new URLSearchParams(location.search).get("semilla");
     return q ? (parseInt(q, 36) || 20260903) : 20260903;
   })();
-  worker.postMessage({ t: "init", regions: REGIONS, wild: WILD, seed: SEED0 });
+  worker.postMessage({ t: "init", regions: REGIONS, wild: WILD, seed: SEED0, citadel: CITADEL, qual: coarse ? 0.62 : 1, cap: coarse ? 420000 : 900000 });
 
   /* ================= REJILLA ================= */
   const canvas = $("c");
@@ -647,7 +941,7 @@ self.onmessage = function (e) {
   let cols = 0, rows = 0, cellW = 8, cellH = 13, focal = 1, focalY = 1, fs = 12, halfFov = 0.9;
   const FAR = 560;
   let bufs = [], cur = null, free = null, pending = false;
-  let islandsFlat = new Float32Array(0), stats = { sectors: 0, visible: 0, live: 0, touched: 0 };
+  let islandsFlat = new Float32Array(0), bridgesFlat = new Float32Array(0), stats = { sectors: 0, visible: 0, live: 0, touched: 0 };
 
   function makeSet() {
     return { z: new Float32Array(cols * rows), m: new Uint8Array(cols * rows), s: new Uint8Array(cols * rows) };
@@ -676,7 +970,7 @@ self.onmessage = function (e) {
     if (d.z.length !== cols * rows) { pending = false; return; }   // llegó de un tamaño viejo
     free = cur;
     cur = { z: d.z, m: d.m, s: d.s };
-    islandsFlat = d.isl; stats = d.stats;
+    islandsFlat = d.isl; bridgesFlat = d.brd || bridgesFlat; stats = d.stats;
     pending = false;
   };
 
@@ -710,17 +1004,61 @@ self.onmessage = function (e) {
     el.querySelector(".s").textContent = small;
     el.classList.add("on"); toastTimer = 1.9;
   }
+  /* Viajar puede llegar antes que el mundo: si el sector de destino aún no se
+     ha generado no hay isla que encuadrar, y te plantaba en el sitio y el
+     tamaño equivocados. Se reintenta el encuadre unos segundos, y se abandona
+     en cuanto tocas los mandos. */
+  let reencuadre = -1, reencuadreT = 0;
   function travel(i) {
     const R = REGIONS[i];
-    const T = bigIslandNear(R.cx, R.cz, 220);
+    const T = bigIslandNear(R.cx, R.cz, 240);
+    reencuadre = T ? -1 : i; reencuadreT = t;
     const bx = T ? T.x : R.cx, by = T ? T.y : R.cy, bz = T ? T.z : R.cz;
-    cam.x = bx - 85; cam.y = by + 34; cam.z = bz - 85;
-    cam.yaw = Math.atan2(85, 85); cam.pitch = -0.2;
+    /* La distancia sale del tamaño de la isla: la Ciudadela mide 78 de radio y
+       a 85 te dejaba dentro de la muralla. */
+    const d = Math.max(90, (T ? T.r : 26) * 2.95);
+    cam.x = bx - d * 0.72; cam.y = by + (T ? T.r : 26) * 0.85 + 16; cam.z = bz - d * 0.72;
+    cam.yaw = Math.atan2(1, 1); cam.pitch = -0.26;
     mode = "fly"; auto = false; lastInput = t;
     toast(R.name, R.sub);
   }
 
   /* ---------- islas cercanas (llegan del worker) ---------- */
+  /* Altura del tablero de un puente bajo un punto, si es que hay puente.
+     Ocho números por puente: los dos anclajes, la flecha de la catenaria y la
+     media anchura. Con eso se anda por encima sin guardar su geometría. */
+  function bridgeAt(x, z) {
+    let best = null;
+    for (let i = 0; i < bridgesFlat.length; i += 8) {
+      const x1 = bridgesFlat[i], y1 = bridgesFlat[i+1], z1 = bridgesFlat[i+2];
+      const x2 = bridgesFlat[i+3], y2 = bridgesFlat[i+4], z2 = bridgesFlat[i+5];
+      const sag = bridgesFlat[i+6], W = bridgesFlat[i+7];
+      const dx = x2 - x1, dz = z2 - z1, L2 = dx * dx + dz * dz;
+      if (!L2) continue;
+      let t = ((x - x1) * dx + (z - z1) * dz) / L2;
+      if (t < 0 || t > 1) continue;
+      const px = x1 + dx * t, pz = z1 + dz * t;
+      if (Math.hypot(x - px, z - pz) > W + 0.6) continue;
+      const y = y1 + (y2 - y1) * t - Math.sin(t * Math.PI) * sag;
+      if (!best || y > best.top) best = { top: y, px, pz, W };
+    }
+    return best;
+  }
+  /* El suelo pisable: lo más alto entre isla y puente que no esté por encima de
+     la cabeza. Sin ese filtro, un puente que pasa por arriba te subiría de
+     golpe al cruzar por debajo. */
+  function groundAt(x, z, y) {
+    const I = islandAt(x, z), B = bridgeAt(x, z);
+    const cands = [];
+    if (I) cands.push({ top: I.top, br: null });
+    if (B) cands.push({ top: B.top, br: B });
+    if (!cands.length) return null;
+    const techo = (y === undefined ? Infinity : y + 3.2);
+    let mejor = null;
+    for (const c of cands) if (c.top <= techo && (mejor === null || c.top > mejor.top)) mejor = c;
+    if (mejor === null) mejor = cands.reduce((a, b2) => (a.top < b2.top ? a : b2));
+    return mejor;
+  }
   function islandAt(x, z) {
     let best = null, bestY = -1e9;
     for (let i = 0; i < islandsFlat.length; i += 5) {
@@ -838,8 +1176,8 @@ self.onmessage = function (e) {
   /* dónde se puede posar: justo debajo, o el borde de la isla más cercana.
      Aterrizar tiene que perdonar la puntería o nadie lo encuentra. */
   function landingSpot() {
-    const under = islandAt(cam.x, cam.z);
-    if (under && cam.y - under.top < 26 && cam.y > under.top - 4)
+    const under = groundAt(cam.x, cam.z, cam.y);
+    if (under !== null && cam.y - under.top < 26 && cam.y > under.top - 4)
       return { x: cam.x, z: cam.z, top: under.top };
     let best = null, bd = 1e9;
     for (let i = 0; i < islandsFlat.length; i += 5) {
@@ -875,7 +1213,7 @@ self.onmessage = function (e) {
     if (k === "t") { dayPhase = (dayPhase + 0.25) % 1; e.preventDefault(); return; }
     if (k === "f") { if (mode === "walk") { mode = "fly"; toast("Al aire", ""); } auto = false; lastInput = t; e.preventDefault(); return; }
     if (k === " ") { action(); auto = false; lastInput = t; e.preventDefault(); return; }
-    if (k >= "1" && k <= "6") { const i = +k - 1; if (i < NREG) { travel(i); mapOpen = false; $("mapwrap").hidden = true; } e.preventDefault(); return; }
+    if (k >= "1" && k <= "7") { const i = +k - 1; if (i < NREG) { travel(i); mapOpen = false; $("mapwrap").hidden = true; } e.preventDefault(); return; }
     keys[k] = true;
     if ("wasdqe".includes(k) || k === "shift") { auto = false; lastInput = t; e.preventDefault(); }
   });
@@ -1071,8 +1409,8 @@ self.onmessage = function (e) {
       if (!frame.n || frame.n % 90 === 0) tourTarget = bigIslandNear(R.cx, R.cz, 200) || tourTarget;
       const T = tourTarget && Math.hypot(tourTarget.x - R.cx, tourTarget.z - R.cz) < 260 ? tourTarget : { x: R.cx, y: R.cy, z: R.cz, r: 24 };
       const orbit = t * (reduced ? 0.05 : 0.10);
-      const rad = 62 + T.r * 2.2;
-      const tx = T.x + Math.cos(orbit) * rad, ty = T.y + 22 + Math.sin(t * 0.09) * 12, tz = T.z + Math.sin(orbit) * rad;
+      const rad = 62 + T.r * 2.6;
+      const tx = T.x + Math.cos(orbit) * rad, ty = T.y + 22 + T.r * 0.55 + Math.sin(t * 0.09) * 12, tz = T.z + Math.sin(orbit) * rad;
       const k = 1 - Math.pow(0.001, dt);
       cam.x = mix(cam.x, tx, k * 1.4); cam.y = mix(cam.y, ty, k * 1.4); cam.z = mix(cam.z, tz, k * 1.4);
       const lx = T.x - cam.x, ly = T.y + 2 - cam.y, lz = T.z - cam.z;
@@ -1107,9 +1445,20 @@ self.onmessage = function (e) {
       cam.z += cy_ * sp * mvF - sy_ * sp * mvR;
       if (keys["arrowleft"])  cam.yaw -= 0.03;
       if (keys["arrowright"]) cam.yaw += 0.03;
-      const g = islandAt(cam.x, cam.z);
-      if (!g) { mode = "fly"; toast("Te caíste", "vuelas otra vez"); }
+      const g = groundAt(cam.x, cam.z, cam.y - 1.8);
+      if (g === null) { mode = "fly"; toast("Te caíste", "vuelas otra vez"); }
       else {
+        /* Andando por un puente te quedas en el tablero. Sin esta corrección un
+           camino de 4,4 de ancho a 20 unidades por segundo se cruza una vez de
+           cada cinco: la baranda tiene que empujar, no solo decorar. */
+        if (g.br) {
+          const lx = cam.x - g.br.px, lz = cam.z - g.br.pz;
+          const lat = Math.hypot(lx, lz), tope = g.br.W * 0.78;
+          if (lat > tope && lat > 0.001) {
+            cam.x = g.br.px + (lx / lat) * tope;
+            cam.z = g.br.pz + (lz / lat) * tope;
+          }
+        }
         const target = g.top + 1.8;
         vy -= 22 * dt;
         cam.y += vy * dt;
@@ -1120,6 +1469,12 @@ self.onmessage = function (e) {
     cy_ = Math.cos(cam.yaw); sy_ = Math.sin(cam.yaw);
     cp_ = Math.cos(cam.pitch); sp_ = Math.sin(cam.pitch);
     const fwd = [sy_ * cp_, sp_, cy_ * cp_];
+
+    if (reencuadre >= 0) {
+      const tocado = keys["w"] || keys["a"] || keys["s"] || keys["d"] || keys["q"] || keys["e"] || stick.active;
+      if (tocado || t - reencuadreT > 6) reencuadre = -1;
+      else if (bigIslandNear(REGIONS[reencuadre].cx, REGIONS[reencuadre].cz, 240)) travel(reencuadre);
+    }
 
     /* --- pedir la rejilla al worker --- */
     if (!pending && free) {
