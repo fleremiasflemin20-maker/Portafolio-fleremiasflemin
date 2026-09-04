@@ -37,6 +37,19 @@
   .brand h1{font-family:Cinzel,"Times New Roman",serif;font-size:25px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);margin:0;text-shadow:0 0 22px rgba(0,0,0,.85)}
   .brand p{margin:6px 0 0;font-size:10.5px;letter-spacing:.24em;color:var(--dim)}
 
+  /* El botón vive dentro del bloque de marca, que no recibe clics: hay que
+     devolvérselos solo a él. */
+  .brand button{
+    pointer-events:auto;margin-top:14px;display:inline-block;cursor:pointer;
+    border:1px solid rgba(255,198,120,.55);background:rgba(10,14,26,.72);
+    color:var(--ember);font:500 10.5px/1 "IBM Plex Mono",monospace;
+    letter-spacing:.18em;text-transform:uppercase;padding:9px 14px;border-radius:3px;
+    transition:background .2s,color .2s,border-color .2s
+  }
+  .brand button:hover{background:var(--ember);color:#0a0e1a;border-color:var(--ember)}
+  .brand button:active{transform:translateY(1px)}
+  body.touch .brand button{margin-top:10px;padding:8px 11px;font-size:9.5px}
+
   .readout{top:22px;right:24px;text-align:right;font-variant-numeric:tabular-nums;line-height:1.85}
   .readout b{color:var(--aether);font-weight:500;letter-spacing:.1em}
 
@@ -102,6 +115,7 @@
 <div class="hud brand">
   <h1>Islas de Aether</h1>
   <p><span id="reg">Aether</span> · motor ASCII · sin texturas</p>
+  <button id="bCiudadela">◈ Ir a la Ciudadela</button>
 </div>
 
 <div class="hud readout">
@@ -128,7 +142,7 @@
   <span><kbd>F</kbd> volar</span>
   <span><kbd>M</kbd> mapa</span>
   <span><kbd>N</kbd> audio</span>
-  <span><kbd>1</kbd>–<kbd>7</kbd> viajar</span>
+  <span><kbd>1</kbd>–<kbd>7</kbd> viajar · <kbd>7</kbd> ciudadela</span>
   <span><kbd>T</kbd> hora</span>
   <span><kbd>H</kbd> motor</span>
 </div>
@@ -164,7 +178,7 @@
     <li><div><strong>Un mundo sin borde.</strong> No hay mapa fijo: el espacio se divide en sectores de 220 unidades y cada uno se genera cuando te acercas, a partir de <code>hash(sx, sz, semilla)</code>. Las seis regiones con nombre solo suben la densidad donde caen. Los sectores lejanos se desalojan. Con <code>?semilla=</code> en la URL cambias de mundo entero.</div></li>
     <li><div><strong>Todo eso vive en un Worker.</strong> Generación y proyección corren fuera del hilo principal y devuelven la rejilla ya resuelta en buffers transferibles que van y vienen sin copiarse. El hilo principal solo pinta, suena y juega — por eso generar sectores nuevos no da tirones.</div></li>
     <li><div><strong>Caminos que se pueden pisar.</strong> Cada isla tiende un puente a su vecina más cercana del vecindario de nueve sectores. Como las dos hacen la misma cuenta, el par se dibuja una sola vez — lo pone quien tiene la clave menor — y los dos extremos coinciden aunque cada sector nazca en un momento distinto. Al andar, la baranda empuja: sin eso, un tablero de 4,4 de ancho se cruza una vez de cada cinco.</div></li>
-    <li><div><strong>Y se pinta en tiras.</strong> Cada fila agrupa celdas contiguas del mismo color en una cadena y se dibuja de un golpe: de ~10.000 celdas a unos cientos de llamadas.</div></li>
+    <li><div><strong>Y se pinta en tiras, con techo.</strong> Cada fila agrupa celdas contiguas del mismo color en una cadena y se dibuja de un golpe: de ~10.000 celdas a unos cientos de llamadas. Y la rejilla tiene tope: pasado él, al agrandar la ventana el glifo crece en vez de multiplicarse — todo el coste del motor es por celda, así que sin tope maximizar triplicaba el trabajo por fotograma.</div></li>
   </ol>
   <div class="close">Pulsa H para volver al vuelo</div>
 </div>
@@ -828,7 +842,7 @@ function render(msg) {
     flat[a*5] = isl[a].x; flat[a*5+1] = isl[a].y; flat[a*5+2] = isl[a].z;
     flat[a*5+3] = isl[a].r; flat[a*5+4] = isl[a].reg;
   }
-  self.postMessage({ t: "g", z: z, m: m, s: s, isl: flat, brd: flatB,
+  self.postMessage({ t: "g", gen: msg.gen, z: z, m: m, s: s, isl: flat, brd: flatB,
     stats: { sectors: sectors.size, visible: visible, live: live, touched: touched } },
     [z.buffer, m.buffer, s.buffer, flat.buffer, flatB.buffer]);
 }
@@ -883,7 +897,12 @@ self.onmessage = function (e) {
     /* La Ciudadela: una sola isla, cuatro veces mayor que cualquier otra, con
        una fortaleza encima. Piedra fría, verdín en las juntas y luz de hogar en
        las ventanas — el contraste es lo que la hace legible de lejos. */
-    { name:"Ciudadela", sub:"la fortaleza de una sola isla", cx:-120, cz:-560, cy:6, span:250, rMin:60, rMax:78,
+    /* rMin/rMax son el tamaño de las islas *de alrededor*, no el de la
+       fortaleza: esa entra aparte por CITADEL con su radio fijo. Cuando aquí
+       decía 60–78, todo el disco de 287 unidades de la región se llenaba de
+       islas gigantes — de ahí el millón y medio de puntos y que al viajar te
+       encuadrara un peñasco cualquiera creyendo que era el castillo. */
+    { name:"Ciudadela", sub:"la fortaleza de una sola isla", cx:-120, cz:-560, cy:6, span:250, rMin:10, rMax:26,
       flora:"dead", houses:false, spires:0, glow:{2:0.8,3:0.55},
       skyNight:[7,7,12], skyDay:[34,38,50],
       mats:[[142,140,152],[104,132,110],[176,206,226],[255,198,120],[176,196,214],[214,120,120],[224,228,240],[96,92,96]] }
@@ -940,34 +959,72 @@ self.onmessage = function (e) {
   const ctx = canvas.getContext("2d", { alpha: false });
   let cols = 0, rows = 0, cellW = 8, cellH = 13, focal = 1, focalY = 1, fs = 12, halfFov = 0.9;
   const FAR = 560;
-  let bufs = [], cur = null, free = null, pending = false;
+  let bufs = [], cur = null, free = null, pending = false, gen = 0;
   let islandsFlat = new Float32Array(0), bridgesFlat = new Float32Array(0), stats = { sectors: 0, visible: 0, live: 0, touched: 0 };
 
   function makeSet() {
     return { z: new Float32Array(cols * rows), m: new Uint8Array(cols * rows), s: new Uint8Array(cols * rows) };
   }
+  /* Techo de celdas.
+
+     Sin él, la rejilla crece con la ventana sin freno: a 1280 son ~10.000
+     celdas y en una pantalla ancha pasan de 25.000. Todo el coste del motor
+     —proyección, z-buffer, tiras de texto— es por celda, así que agrandar la
+     ventana triplicaba el trabajo por fotograma. Ahora, pasado el tope, el
+     glifo crece en vez de multiplicarse: se ve igual de bien y cuesta lo
+     mismo. */
+  const MAXCELLS = coarse ? 9000 : 17000;
+  let curDpr = 1;
+
   function resize() {
-    const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+    const w = innerWidth, h = innerHeight;
+    /* En pantallas grandes el canvas ya es enorme en CSS; duplicarlo además
+       por densidad multiplica por cuatro los píxeles que hay que rellenar con
+       texto, que es justo lo que se atragantaba al maximizar. */
+    const dpr = Math.min(devicePixelRatio || 1, w >= 2000 ? 1.25 : w >= 1500 ? 1.5 : 2);
+
+    let f = coarse ? clamp(w / 58, 9, 16) : clamp(w / 104, 8, 15);
+    const minF = Math.sqrt((w * h) / (0.636 * MAXCELLS));
+    if (minF > f) f = minF;
+
+    ctx.font = '500 ' + f.toFixed(2) + 'px "IBM Plex Mono", ui-monospace, monospace';
+    ctx.textBaseline = "top";
+    const cw = ctx.measureText("M").width || f * 0.6, ch = f * 1.06;
+    const nc = Math.max(20, Math.floor(w / cw)), nr = Math.max(12, Math.floor(h / ch));
+
+    // Nada que rehacer: no tocar los buffers ni cortar lo que va en vuelo.
+    if (nc === cols && nr === rows && dpr === curDpr && cur) {
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.font = '500 ' + f.toFixed(2) + 'px "IBM Plex Mono", ui-monospace, monospace';
+      ctx.textBaseline = "top";
+      return;
+    }
+
+    fs = f; cellW = cw; cellH = ch; cols = nc; rows = nr; curDpr = dpr;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    fs = coarse ? clamp(w / 58, 9, 16) : clamp(w / 104, 8, 15);
     ctx.font = '500 ' + fs.toFixed(2) + 'px "IBM Plex Mono", ui-monospace, monospace';
     ctx.textBaseline = "top";
-    cellW = ctx.measureText("M").width || fs * 0.6;
-    cellH = fs * 1.06;
-    cols = Math.max(20, Math.floor(w / cellW));
-    rows = Math.max(12, Math.floor(h / cellH));
     focal = (cols / 2) / Math.tan(0.55);
     focalY = focal * (cellW / cellH);
     halfFov = Math.atan(Math.hypot(Math.tan(0.55), (rows / 2) / focalY)) + 0.14;
+    gen++;                       // lo que vuelva del worker con otra medida se tira
     cur = makeSet(); free = makeSet(); pending = false;
   }
-  addEventListener("resize", resize);
+  /* Arrastrar el borde de una ventana dispara `resize` sesenta veces por
+     segundo. Reasignar tres buffers en cada uno —y cortar la petición que
+     estaba en vuelo— es exactamente el tirón que se siente al maximizar. */
+  let resizeT = 0;
+  addEventListener("resize", () => {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(resize, 130);
+  });
 
   worker.onmessage = (e) => {
     const d = e.data;
     if (d.t !== "g") return;
-    if (d.z.length !== cols * rows) { pending = false; return; }   // llegó de un tamaño viejo
+    if (d.gen !== gen || d.z.length !== cols * rows) { pending = false; return; }  // de una medida ya vieja
     free = cur;
     cur = { z: d.z, m: d.m, s: d.s };
     islandsFlat = d.isl; bridgesFlat = d.brd || bridgesFlat; stats = d.stats;
@@ -1009,9 +1066,19 @@ self.onmessage = function (e) {
      tamaño equivocados. Se reintenta el encuadre unos segundos, y se abandona
      en cuanto tocas los mandos. */
   let reencuadre = -1, reencuadreT = 0;
-  function travel(i) {
+  /* No vale cualquier isla: hay que esperar a una del tamaño que esa región
+     promete. Si no, al viajar a la Ciudadela te encuadraba el primer peñasco
+     de los Confines que hubiera entrado en memoria y te dejaba a trescientas
+     unidades de la fortaleza, mirando a otro lado. */
+  function destinoDe(i) {
     const R = REGIONS[i];
     const T = bigIslandNear(R.cx, R.cz, 240);
+    const minR = i === CITADEL.reg ? CITADEL.r * 0.7 : R.rMin * 0.8;
+    return T && T.r >= minR ? T : null;
+  }
+  function travel(i) {
+    const R = REGIONS[i];
+    const T = destinoDe(i);
     reencuadre = T ? -1 : i; reencuadreT = t;
     const bx = T ? T.x : R.cx, by = T ? T.y : R.cy, bz = T ? T.z : R.cz;
     /* La distancia sale del tamaño de la isla: la Ciudadela mide 78 de radio y
@@ -1284,6 +1351,13 @@ self.onmessage = function (e) {
     $("bBaja").addEventListener("touchstart", () => keys["q"] = true, { passive: true });
     $("bBaja").addEventListener("touchend", () => keys["q"] = false);
   }
+  /* Un botón, no solo una tecla: la Ciudadela es lo más vistoso del mundo y
+     estaba escondida detrás de un "7" que nadie adivina. */
+  $("bCiudadela").addEventListener("click", () => {
+    startAudio();
+    mapOpen = false; $("mapwrap").hidden = true;
+    travel(NREG - 1);
+  });
   $("mapwrap").addEventListener("click", e => { if (e.target.id === "mapwrap") { mapOpen = false; $("mapwrap").hidden = true; } });
 
   /* ================= DINÁMICOS ================= */
@@ -1472,8 +1546,8 @@ self.onmessage = function (e) {
 
     if (reencuadre >= 0) {
       const tocado = keys["w"] || keys["a"] || keys["s"] || keys["d"] || keys["q"] || keys["e"] || stick.active;
-      if (tocado || t - reencuadreT > 6) reencuadre = -1;
-      else if (bigIslandNear(REGIONS[reencuadre].cx, REGIONS[reencuadre].cz, 240)) travel(reencuadre);
+      if (tocado || t - reencuadreT > 14) reencuadre = -1;
+      else if (destinoDe(reencuadre)) travel(reencuadre);
     }
 
     /* --- pedir la rejilla al worker --- */
@@ -1482,7 +1556,7 @@ self.onmessage = function (e) {
       const z = free.z, m = free.m, s = free.s;
       free = null;
       worker.postMessage({
-        t: "f", cam: [cam.x, cam.y, cam.z], yaw: cam.yaw, pitch: cam.pitch,
+        t: "f", gen, cam: [cam.x, cam.y, cam.z], yaw: cam.yaw, pitch: cam.pitch,
         cols, rows, focal, focalY, far: FAR, halfFov,
         mul: MUL, emissive: EMI, sun: lightDir, amb, skyLight,
         z, m, s
@@ -1732,7 +1806,7 @@ self.onmessage = function (e) {
       if (!pending && free) {
         pending = true;
         const z = free.z, m = free.m, s = free.s; free = null;
-        worker.postMessage({ t: "f", cam: [cam.x, cam.y, cam.z], yaw: cam.yaw, pitch: cam.pitch,
+        worker.postMessage({ t: "f", gen, cam: [cam.x, cam.y, cam.z], yaw: cam.yaw, pitch: cam.pitch,
           cols, rows, focal, focalY, far: FAR, halfFov, mul: MUL, emissive: EMI,
           sun: [0.4, 0.8, -0.45], amb: 0.8, skyLight: 0.7, z, m, s }, [z.buffer, m.buffer, s.buffer]);
       }
