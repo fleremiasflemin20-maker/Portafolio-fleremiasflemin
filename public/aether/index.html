@@ -59,7 +59,7 @@
   .mode{right:24px;bottom:20px;color:var(--ember);letter-spacing:.2em}
   .mode.free{color:var(--aether)}
   #snd{right:24px;bottom:44px;color:var(--dim);letter-spacing:.2em}
-  #snd::before{content:"♪ audio off"}
+  #snd::before{content:"♪ audio off · N"}
   #snd.on{color:var(--aether)}
   #snd.on::before{content:"♪ audio on"}
 
@@ -141,7 +141,7 @@
   <span><kbd>espacio</kbd> aterrizar / actuar</span>
   <span><kbd>F</kbd> volar</span>
   <span><kbd>M</kbd> mapa</span>
-  <span><kbd>N</kbd> audio</span>
+  <span><kbd>N</kbd> audio (apagado)</span>
   <span><kbd>1</kbd>–<kbd>7</kbd> viajar · <kbd>7</kbd> ciudadela</span>
   <span><kbd>T</kbd> hora</span>
   <span><kbd>H</kbd> motor</span>
@@ -1166,11 +1166,13 @@ self.onmessage = function (e) {
     const ac = new AC();
     audio.ctx = ac;
     audio.master = ac.createGain(); audio.master.gain.value = 0.0; audio.master.connect(ac.destination);
+    /* El viento es ruido filtrado, y a poco que suba se oye como lluvia
+       encima del micrófono. Va bajo a propósito: ambiente, no protagonista. */
     const nb = noiseBuffer(ac);
 
     const w = ac.createBufferSource(); w.buffer = nb; w.loop = true;
     const wf = ac.createBiquadFilter(); wf.type = "bandpass"; wf.frequency.value = 480; wf.Q.value = 0.7;
-    const wg = ac.createGain(); wg.gain.value = 0.5;
+    const wg = ac.createGain(); wg.gain.value = 0.16;
     w.connect(wf); wf.connect(wg); wg.connect(audio.master); w.start();
     audio.wind = wg; audio.windF = wf;
 
@@ -1180,19 +1182,19 @@ self.onmessage = function (e) {
     wa.connect(wal); wal.connect(wag); wag.connect(audio.master); wa.start();
     audio.water = wag;
 
-    audio.droneG = ac.createGain(); audio.droneG.gain.value = 0.10; audio.droneG.connect(audio.master);
+    audio.droneG = ac.createGain(); audio.droneG.gain.value = 0.05; audio.droneG.connect(audio.master);
     for (let i = 0; i < 2; i++) {
       const o = ac.createOscillator(); o.type = "sine"; o.frequency.value = 55 + i * 0.6;
       o.connect(audio.droneG); o.start(); audio.drone.push(o);
     }
     audio.on = true;
-    audio.master.gain.linearRampToValueAtTime(0.5, ac.currentTime + 1.2);
+    audio.master.gain.linearRampToValueAtTime(0.32, ac.currentTime + 1.2);
     $("snd").classList.add("on");
   }
   function toggleAudio() {
     if (!audio.ctx) { startAudio(); return; }
     audio.on = !audio.on;
-    audio.master.gain.linearRampToValueAtTime(audio.on ? 0.5 : 0, audio.ctx.currentTime + 0.4);
+    audio.master.gain.linearRampToValueAtTime(audio.on ? 0.32 : 0, audio.ctx.currentTime + 0.4);
     $("snd").classList.toggle("on", audio.on);
   }
   function roar(pitch) {
@@ -1285,8 +1287,6 @@ self.onmessage = function (e) {
     if ("wasdqe".includes(k) || k === "shift") { auto = false; lastInput = t; e.preventDefault(); }
   });
   addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
-  addEventListener("pointerdown", startAudio, { once: true });
-  addEventListener("keydown", startAudio, { once: true });
 
   /* ratón: arrastrar para mirar */
   const stage = $("stage");
@@ -1313,7 +1313,7 @@ self.onmessage = function (e) {
     document.body.classList.add("touch");
     const knob = $("knob"), pad = $("pad");
     stage.addEventListener("touchstart", e => {
-      auto = false; lastInput = t; startAudio();
+      auto = false; lastInput = t;
       for (const tp of e.changedTouches) {
         if (tp.clientX < innerWidth * 0.45 && !stick.active) {
           stick.active = true; stick.id = tp.identifier; stick.ox = tp.clientX; stick.oy = tp.clientY;
@@ -1345,7 +1345,7 @@ self.onmessage = function (e) {
     stage.addEventListener("touchend", endTouch);
     stage.addEventListener("touchcancel", endTouch);
     $("bMapa").addEventListener("click", () => { mapOpen = !mapOpen; $("mapwrap").hidden = !mapOpen; });
-    $("bAcc").addEventListener("click", () => { startAudio(); action(); });
+    $("bAcc").addEventListener("click", () => { action(); });
     $("bSube").addEventListener("touchstart", () => keys["e"] = true, { passive: true });
     $("bSube").addEventListener("touchend", () => keys["e"] = false);
     $("bBaja").addEventListener("touchstart", () => keys["q"] = true, { passive: true });
@@ -1354,7 +1354,6 @@ self.onmessage = function (e) {
   /* Un botón, no solo una tecla: la Ciudadela es lo más vistoso del mundo y
      estaba escondida detrás de un "7" que nadie adivina. */
   $("bCiudadela").addEventListener("click", () => {
-    startAudio();
     mapOpen = false; $("mapwrap").hidden = true;
     travel(NREG - 1);
   });
@@ -1677,11 +1676,11 @@ self.onmessage = function (e) {
       const speed = keys["shift"] ? 1 : 0.45;
       const alt = clamp(Math.abs(cam.y) / 120, 0, 1);
       audio.windF.frequency.value = 320 + alt * 900 + speed * 300;
-      audio.wind.gain.value = (mode === "walk" ? 0.10 : 0.16 + alt * 0.16) * (0.6 + speed * 0.6);
-      audio.water.gain.value = clamp(1 - nearestFall / 90, 0, 1) * 0.42;
+      audio.wind.gain.value = (mode === "walk" ? 0.03 : 0.05 + alt * 0.05) * (0.6 + speed * 0.6);
+      audio.water.gain.value = clamp(1 - nearestFall / 90, 0, 1) * 0.16;
       const dfreq = 44 + (nearest % 6) * 5.5;
       audio.drone.forEach((o, i) => o.frequency.setTargetAtTime(dfreq + i * 0.6, audio.ctx.currentTime, 1.5));
-      audio.droneG.gain.value = 0.05 + 0.07 * (1 - clamp(nd / 400, 0, 1));
+      audio.droneG.gain.value = 0.025 + 0.035 * (1 - clamp(nd / 400, 0, 1));
     }
 
     /* --- pintar --- */
