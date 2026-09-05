@@ -21,7 +21,10 @@ export function Galeria() {
   const lista = PROYECTOS.filter((p) => p.imagen)
 
   return (
-    <section className="relative z-10 mx-auto w-full max-w-7xl px-6 py-24 md:px-12 md:py-32 lg:px-20">
+    <section
+      id="galeria"
+      className="relative z-10 mx-auto w-full max-w-7xl px-6 py-24 md:px-12 md:py-32 lg:px-20"
+    >
       <header className="max-w-2xl">
         <p className="font-mono text-caption uppercase" style={{ color: 'var(--tinta)' }}>
           Galería · capturas reales

@@ -18,6 +18,8 @@ import { TituloVivo } from './components/TituloVivo'
 import { Modelos } from './components/Modelos'
 import { PanelRetro } from './components/PanelRetro'
 import { ControlManos } from './components/ControlManos'
+import { BotonGaleria } from './components/BotonGaleria'
+import { carrusel3D } from './lib/carrusel-3d'
 
 /* Mismo patrón que `VIDEO` en Cinematica.tsx y `galeria()` en proyectos.ts:
    el prefijo de BASE_URL hace falta porque en GitHub Pages el sitio cuelga
@@ -63,6 +65,10 @@ export default function App() {
 
   useEffect(() => {
     const teclas = (e: KeyboardEvent) => {
+      // El carrusel de figuras Meshy (dentro del expediente de 3D) usa las
+      // mismas flechas para pasar de personaje. Cuando está a la vista, se
+      // queda con la tecla y la rueda de faceta la deja pasar.
+      if (carrusel3D.enVista) return
       if (e.key === 'ArrowRight') setActiva((i) => (i + 1) % FACETAS.length)
       if (e.key === 'ArrowLeft') setActiva((i) => (i - 1 + FACETAS.length) % FACETAS.length)
     }
@@ -243,6 +249,7 @@ export default function App() {
                   <Boton href="https://www.linkedin.com/in/fleremahiaslenin" secundario>
                     LinkedIn
                   </Boton>
+                  <BotonGaleria clave={f.clave} />
                 </div>
               )}
 
