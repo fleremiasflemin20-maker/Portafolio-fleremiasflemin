@@ -8,6 +8,7 @@ import { Escena } from './components/Escena'
 import { RuedaPersonaje } from './components/RuedaPersonaje'
 import { Grano } from './components/Atmosfera'
 import { Expediente } from './components/Expediente'
+import { SeccionGogeta } from './components/SeccionGogeta'
 import { Galeria } from './components/Galeria'
 import { IslasDeAether } from './components/IslasDeAether'
 import { Cinematica } from './components/Cinematica'
@@ -276,6 +277,13 @@ export default function App() {
 
         <div className="pointer-events-auto">
           <Expediente faceta={f} />
+        </div>
+
+        {/* Sección fija, no filtrada por faceta: es la pieza más trabajada
+            del cajón de 3D y se queda a la vista sin importar qué faceta
+            esté activa en la rueda. */}
+        <div className="pointer-events-auto">
+          <SeccionGogeta />
         </div>
 
         {/* La vista de conjunto, con foto de cada pieza. Va aquí a propósito:

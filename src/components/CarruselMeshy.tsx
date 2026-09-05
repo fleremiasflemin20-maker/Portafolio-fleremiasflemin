@@ -1,16 +1,66 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Bounds, Center, Html, OrbitControls, useGLTF } from '@react-three/drei'
+import { Bounds, Center, Html, OrbitControls, useGLTF, useTexture } from '@react-three/drei'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { PERSONAJES_3D } from '../lib/personajes3d'
+import * as THREE from 'three'
+import { PERSONAJES_3D, type Personaje3D } from '../lib/personajes3d'
 import { carrusel3D } from '../lib/carrusel-3d'
 
 const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')
-const ruta = (archivo: string) => `${BASE}/models/meshy/${archivo}.glb`
+const DRACO = `${BASE}/draco/`
+const ruta = (p: Personaje3D) => `${BASE}/models/${p.carpeta ?? 'meshy'}/${p.archivo}.glb`
+const rutaTextura = (p: Personaje3D, archivo: string) => `${BASE}/textures/${p.carpeta ?? 'meshy'}/${archivo}`
 
-function Modelo({ archivo }: { archivo: string }) {
-  const { scene } = useGLTF(ruta(archivo))
+/** Las piezas de Meshy traen el material horneado en el propio `.glb`. */
+function ModeloSimple({ personaje }: { personaje: Personaje3D }) {
+  const { scene } = useGLTF(ruta(personaje))
   return <primitive object={scene} />
+}
+
+/**
+ * Un escaneo fotogramétrico, en cambio, llega con un material de relleno: el
+ * color real vive en mapas PBR sueltos que hay que montar a mano — mismo
+ * criterio que `GogetaModel.tsx` en el proyecto original, sin el sombreado
+ * cel ni las etapas: aquí solo hace falta la figura terminada.
+ */
+function ModeloPBR({ personaje }: { personaje: Personaje3D }) {
+  const { scene } = useGLTF(ruta(personaje), DRACO)
+  const t = personaje.texturas!
+  const maps = useTexture({
+    map: rutaTextura(personaje, t.map),
+    normalMap: rutaTextura(personaje, t.normalMap),
+    roughnessMap: rutaTextura(personaje, t.roughnessMap),
+    metalnessMap: rutaTextura(personaje, t.metalnessMap),
+  })
+
+  const geometry = useMemo(() => {
+    let hallada: THREE.BufferGeometry | null = null
+    scene.traverse((hijo) => {
+      if (!hallada && (hijo as THREE.Mesh).isMesh) hallada = (hijo as THREE.Mesh).geometry
+    })
+    return hallada
+  }, [scene])
+
+  useLayoutEffect(() => {
+    for (const [slot, textura] of Object.entries(maps) as [keyof typeof maps, THREE.Texture][]) {
+      // glTF define el origen de UV arriba a la izquierda; TextureLoader carga
+      // con flipY=true y la piel saldría del revés sin esto.
+      textura.flipY = false
+      textura.colorSpace = slot === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace
+      textura.needsUpdate = true
+    }
+  }, [maps])
+
+  if (!geometry) return null
+  return (
+    <mesh geometry={geometry}>
+      <meshStandardMaterial {...maps} />
+    </mesh>
+  )
+}
+
+function Modelo({ personaje }: { personaje: Personaje3D }) {
+  return personaje.texturas ? <ModeloPBR personaje={personaje} /> : <ModeloSimple personaje={personaje} />
 }
 
 function Cargando() {
@@ -77,17 +127,26 @@ export function CarruselMeshy() {
   // Precarga las dos figuras vecinas: cambiar de personaje se siente
   // instantáneo aunque el .glb de al lado pese varios megas.
   useEffect(() => {
-    const der = PERSONAJES_3D[(indice + 1) % PERSONAJES_3D.length]
-    const izq = PERSONAJES_3D[(indice - 1 + PERSONAJES_3D.length) % PERSONAJES_3D.length]
-    useGLTF.preload(ruta(der.archivo))
-    useGLTF.preload(ruta(izq.archivo))
+    const vecinas = [
+      PERSONAJES_3D[(indice + 1) % PERSONAJES_3D.length],
+      PERSONAJES_3D[(indice - 1 + PERSONAJES_3D.length) % PERSONAJES_3D.length],
+    ]
+    for (const p of vecinas) {
+      useGLTF.preload(ruta(p), p.draco ? DRACO : undefined)
+      if (p.texturas) {
+        useTexture.preload(rutaTextura(p, p.texturas.map))
+        useTexture.preload(rutaTextura(p, p.texturas.normalMap))
+        useTexture.preload(rutaTextura(p, p.texturas.roughnessMap))
+        useTexture.preload(rutaTextura(p, p.texturas.metalnessMap))
+      }
+    }
   }, [indice])
 
   return (
     <div ref={panel} className="w-full border border-paper/10 bg-ink/60 p-6 backdrop-blur-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-paper/40">
-          Personajes · Meshy AI
+          Personajes · 3D
         </p>
         <p className="font-mono text-[0.68rem] uppercase tracking-[0.2em]" style={{ color: 'var(--tinta)' }}>
           {String(indice + 1).padStart(2, '0')} / {String(PERSONAJES_3D.length).padStart(2, '0')}
@@ -101,9 +160,9 @@ export function CarruselMeshy() {
           <spotLight position={[-3, 4, -3]} intensity={45} angle={0.9} penumbra={1} color="#3be0d0" />
 
           <Suspense fallback={<Cargando />}>
-            <Bounds key={actual.archivo} fit clip observe margin={1.35}>
+            <Bounds key={actual.id} fit clip observe margin={1.35}>
               <Center>
-                <Modelo archivo={actual.archivo} />
+                <Modelo personaje={actual} />
               </Center>
             </Bounds>
           </Suspense>
@@ -152,7 +211,9 @@ export function CarruselMeshy() {
 
       <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-lg uppercase leading-none md:text-xl">{actual.nombre}</h3>
-        <p className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-paper/35">Generado con Meshy AI</p>
+        <p className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-paper/35">
+          {actual.origen ?? 'Generado con Meshy AI'}
+        </p>
       </div>
     </div>
   )

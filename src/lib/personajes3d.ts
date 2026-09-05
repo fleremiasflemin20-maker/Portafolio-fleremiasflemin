@@ -18,9 +18,41 @@ export type Personaje3D = {
   id: string
   nombre: string
   archivo: string
+  /** Carpeta dentro de `public/models/`. Por defecto 'meshy'. */
+  carpeta?: string
+  /** Lleva `KHR_draco_mesh_compression` — las piezas de Meshy no la usan. */
+  draco?: boolean
+  /** De dónde sale la pieza, cuando no es "Generado con Meshy AI". */
+  origen?: string
+  /**
+   * Mapas PBR sueltos, para una malla que no trae el material horneado en el
+   * `.glb` — el escaneo de Gogeta llega con un material de relleno y el color
+   * real vive en cuatro texturas aparte (ver `GogetaModel.tsx` del proyecto
+   * original). Nombres de archivo dentro de `public/textures/<carpeta>/`.
+   */
+  texturas?: { map: string; normalMap: string; roughnessMap: string; metalnessMap: string }
 }
 
 export const PERSONAJES_3D: Personaje3D[] = [
+  /*
+   * Va primera a propósito: es la pieza más trabajada del cajón —escaneo
+   * fotogramétrico propio, no un prompt de texto— y la que más conviene ver
+   * nada más entrar, antes de las generadas con Meshy.
+   */
+  {
+    id: 'gogeta-ssj4',
+    nombre: 'Gogeta SSJ4',
+    archivo: 'gogeta',
+    carpeta: 'gogeta',
+    draco: true,
+    origen: 'Escaneo fotogramétrico',
+    texturas: {
+      map: 'diffuse_2k.webp',
+      normalMap: 'normal_1k.webp',
+      roughnessMap: 'roughness_1k.webp',
+      metalnessMap: 'metallic_1k.webp',
+    },
+  },
   { id: 'cyber-draconian-sentinel', nombre: 'Cyber Draconian Sentinel', archivo: 'cyber-draconian-sentinel' },
   { id: 'emerald-tyrant-throne', nombre: 'Emerald Tyrant Throne', archivo: 'emerald-tyrant-throne' },
   { id: 'starlight-sentinel', nombre: 'Starlight Sentinel', archivo: 'starlight-sentinel' },
