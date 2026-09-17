@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kit de Lanzamiento · Lenin Bonilla</title>
+<meta name="description" content="Copys listos para LinkedIn e Instagram (ES/EN) más el desglose técnico completo del portafolio de Lenin Bonilla.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --ink:#0A0A0B;
+    --ink-2:#131316;
+    --ink-3:#1c1c20;
+    --paper:#F5F4F1;
+    --paper-dim:rgba(245,244,241,.64);
+    --paper-faint:rgba(245,244,241,.36);
+    --line:rgba(245,244,241,.12);
+    --line-strong:rgba(245,244,241,.22);
+    --turquesa:#3BE0D0;
+    --turquesa-a:#00E5D1;
+    --turquesa-b:#2AC3FF;
+    --sunset:#FF9A4D;
+    --sunset-a:#FF2D8A;
+    --sunset-b:#FF7A2F;
+    --violeta:#C77DFF;
+    --violeta-a:#7B2CFF;
+    --violeta-b:#FF2D8A;
+    --radius:2px;
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height:1.6;
+  }
+
+  ::selection{ background:var(--turquesa); color:var(--ink); }
+
+  .pagina{
+    max-width:52rem;
+    margin:0 auto;
+    padding: 2.75rem 1.5rem 5rem;
+  }
+
+  /* ---------- HUD superior, prestado del propio sitio ---------- */
+  .hud{
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:.66rem; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--paper-faint);
+    border-bottom:1px solid var(--line);
+    padding-bottom:1rem;
+  }
+  .hud b{ color:var(--paper-dim); font-weight:600; letter-spacing:.18em; }
+  .hud .punto{ color:var(--turquesa); }
+
+  /* ---------- toggle de idioma: checkbox puro, sin JS ---------- */
+  .idioma{ position:relative; display:inline-flex; align-items:center; gap:.6rem; cursor:pointer; user-select:none; }
+  .idioma input{ position:absolute; opacity:0; width:1px; height:1px; }
+  .idioma .pista{
+    width:2.6rem; height:1.4rem; border-radius:999px;
+    background:var(--ink-3); border:1px solid var(--line-strong);
+    position:relative; transition:background .2s ease;
+    flex:none;
+  }
+  .idioma .pista::after{
+    content:''; position:absolute; top:2px; left:2px;
+    width:1rem; height:1rem; border-radius:999px;
+    background:var(--turquesa);
+    transition:transform .2s ease;
+  }
+  .idioma input:checked + .pista::after{ transform:translateX(1.2rem); background:var(--sunset); }
+  .idioma input:checked + .pista{ background:var(--ink-3); }
+  .idioma .es, .idioma .en{ font-family:'JetBrains Mono', monospace; font-size:.64rem; letter-spacing:.14em; }
+  .idioma .es{ color:var(--turquesa); }
+  .idioma .en{ color:var(--paper-faint); }
+  #lang:checked ~ .barra .idioma .es{ color:var(--paper-faint); }
+  #lang:checked ~ .barra .idioma .en{ color:var(--sunset); }
+
+  /* contenido bilingüe: el checkbox global decide qué bloque se ve */
+  #lang{ position:absolute; opacity:0; width:1px; height:1px; }
+  [data-en]{ display:none; }
+  #lang:checked ~ .pagina [data-es]{ display:none; }
+  #lang:checked ~ .pagina [data-en]{ display:block; }
+  #lang:checked ~ .pagina span[data-en]{ display:inline; }
+  #lang:checked ~ .pagina .tag[data-en]{ display:inline-flex; }
+
+  /* ---------- hero ---------- */
+  .hero{ padding-top:2.75rem; }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:.72rem;
+    letter-spacing:.2em; text-transform:uppercase; color:var(--turquesa);
+    margin:0 0 .9rem;
+  }
+  h1.titulo{
+    font-family:'Archivo Black', Impact, sans-serif;
+    font-size:clamp(2.4rem, 7vw, 4.4rem);
+    line-height:.96; letter-spacing:-.02em; text-transform:uppercase;
+    margin:0 0 1.1rem;
+    text-wrap:balance;
+    background:linear-gradient(100deg, var(--turquesa-a), var(--turquesa-b));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sub{ max-width:38rem; color:var(--paper-dim); font-size:1.05rem; margin:0 0 1.6rem; }
+
+  .cta{
+    display:inline-flex; align-items:center; gap:.6rem;
+    font-family:'JetBrains Mono', monospace; font-weight:600;
+    font-size:.78rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink); background:var(--turquesa);
+    border:none; padding:.85rem 1.3rem; border-radius:var(--radius);
+    text-decoration:none;
+  }
+  .cta:hover{ background:var(--paper); }
+
+  /* ---------- secciones genéricas ---------- */
+  section{ margin-top:4rem; }
+  .seccion-titulo{
+    font-family:'JetBrains Mono', monospace; font-size:.72rem;
+    letter-spacing:.2em; text-transform:uppercase; color:var(--paper-faint);
+    border-top:1px solid var(--line); padding-top:.9rem; margin:0 0 1.6rem;
+  }
+
+  /* ---------- tarjetas de copy ---------- */
+  .post{
+    border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--ink-2); overflow:hidden; margin-bottom:1.6rem;
+  }
+  .post header{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:1rem; padding:.9rem 1.1rem; border-bottom:1px solid var(--line);
+  }
+  .tag{
+    display:inline-flex; align-items:center; gap:.45rem;
+    font-family:'JetBrains Mono', monospace; font-size:.66rem;
+    letter-spacing:.14em; text-transform:uppercase; font-weight:600;
+    padding:.3rem .6rem; border-radius:999px;
+  }
+  .tag.li{ color:#0A0A0B; background:linear-gradient(100deg, var(--sunset-a), var(--sunset-b)); }
+  .tag.ig{ color:#0A0A0B; background:linear-gradient(100deg, var(--violeta-a), var(--violeta-b)); }
+
+  .copiar{
+    font-family:'JetBrains Mono', monospace; font-size:.64rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--paper-dim); background:transparent;
+    border:1px solid var(--line-strong); border-radius:var(--radius);
+    padding:.45rem .7rem; cursor:pointer; transition:.15s ease;
+  }
+  .copiar:hover{ color:var(--ink); background:var(--paper); border-color:var(--paper); }
+  .copiar.ok{ color:var(--ink); background:var(--turquesa); border-color:var(--turquesa); }
+
+  .post-body{
+    padding:1.3rem 1.1rem 1.5rem; font-size:.95rem; color:var(--paper);
+    white-space:pre-wrap;
+  }
+  .post-body .hash{ color:var(--turquesa); }
+
+  /* ---------- desglose técnico: filas etiqueta/detalle ---------- */
+  .bloque{
+    display:grid; grid-template-columns: 11rem 1fr;
+    gap:.3rem 1.5rem;
+    padding:1.4rem 0; border-top:1px solid var(--line);
+  }
+  .bloque:last-child{ border-bottom:1px solid var(--line); }
+  .bloque h3{
+    grid-column:1; margin:0; font-family:'JetBrains Mono', monospace;
+    font-size:.74rem; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--paper); font-weight:600; line-height:1.4;
+  }
+  .bloque p{ grid-column:2; margin:0; color:var(--paper-dim); font-size:.94rem; }
+  .stats{ grid-column:2; display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.7rem; }
+  .stat{
+    font-family:'JetBrains Mono', monospace; font-variant-numeric:tabular-nums;
+    font-size:.72rem; letter-spacing:.02em; color:var(--turquesa);
+    border:1px solid var(--line-strong); border-radius:var(--radius);
+    padding:.32rem .55rem;
+  }
+  @media (max-width: 640px){
+    .bloque{ grid-template-columns: 1fr; }
+    .bloque p, .stats{ grid-column:1; }
+  }
+
+  /* ---------- stack de tecnologías ---------- */
+  .pills{ display:flex; flex-wrap:wrap; gap:.5rem; }
+  .pill{
+    font-family:'JetBrains Mono', monospace; font-size:.7rem; letter-spacing:.04em;
+    color:var(--paper-dim); border:1px solid var(--line-strong);
+    border-radius:999px; padding:.4rem .8rem;
+  }
+
+  /* ---------- pie ---------- */
+  footer{
+    margin-top:4.5rem; padding-top:1.6rem; border-top:1px solid var(--line);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:1rem;
+    font-family:'JetBrains Mono', monospace; font-size:.68rem;
+    letter-spacing:.08em; color:var(--paper-faint);
+  }
+  footer a{ color:var(--turquesa); text-decoration:none; }
+  .disclaimer{ max-width:34rem; color:var(--paper-faint); font-size:.82rem; line-height:1.6; font-style:italic; margin-top:1.2rem; }
+
+  :focus-visible{ outline:2px solid var(--turquesa); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<input type="checkbox" id="lang">
+
+<div class="pagina">
+
+  <div class="hud barra">
+    <span><b>LENIN BONILLA</b> <span class="punto">·</span> KIT DE LANZAMIENTO</span>
+    <label class="idioma" for="lang">
+      <span class="es">ES</span>
+      <input type="checkbox" tabindex="-1">
+      <span class="pista"></span>
+      <span class="en">EN</span>
+    </label>
+  </div>
+
+  <div class="hero">
+    <p class="eyebrow" data-es>Portafolio · material de lanzamiento</p>
+    <p class="eyebrow" data-en>Portfolio · launch material</p>
+
+    <h1 class="titulo" data-es>El portafolio<br>sale a jugar</h1>
+    <h1 class="titulo" data-en>The portfolio<br>goes live</h1>
+
+    <p class="sub" data-es>Copys listos para pegar en LinkedIn e Instagram, más el desglose técnico completo de todo lo que lleva el sitio — para explicarlo, o para tenerlo a mano en una entrevista.</p>
+    <p class="sub" data-en>Ready-to-paste copy for LinkedIn and Instagram, plus the full technical breakdown of everything the site runs on — for explaining it, or for having on hand in an interview.</p>
+
+    <a class="cta" href="https://fleremiasflemin20-maker.github.io/Portafolio-fleremiasflemin/" target="_blank" rel="noreferrer">
+      <span data-es>Abrir el portafolio ↗</span><span data-en>Open the portfolio ↗</span>
+    </a>
+  </div>
+
+  <!-- ================= COPYS ================= -->
+  <section>
+    <p class="seccion-titulo"><span data-es>Copys listos</span><span data-en>Ready-to-post copy</span></p>
+
+    <article class="post">
+      <header>
+        <span class="tag li">LinkedIn</span>
+        <button class="copiar" data-copy="post-li">Copiar</button>
+      </header>
+      <div class="post-body" id="post-li" data-es>Hace unos años yo tendía camas en un hotel de Santa Monica. Hoy programo el software que usa ese mismo tipo de hotel.
+
+En el medio hubo housekeeping, un ascenso a manager, muchas noches viendo qué se rompía en la operación... y la idea de que todo eso se podía arreglar con software. Así nació Fleremahias PMS.
+
+Cuando llegó el momento de armar mi portafolio, no quería un PDF ni una lista aburrida de proyectos. Quería que se sintiera como se siente construir estas cosas: un poco jugado, un poco obsesivo con el detalle.
+
+Así que terminé con un sitio donde eliges tu "personaje" como en un videojuego, mueves las cosas con la mano frente a la cámara, hay un mundo entero jugable hecho solo con texto, y hasta escaneé una figura de Gogeta con el celular para convertirla en un modelo 3D real.
+
+Nada está inflado. Si un dato no lo puedo respaldar, el sitio mismo lo admite en vez de maquillarlo.
+
+Soy Junior. Lo digo sin pena, porque para mí este proyecto es justo eso: la prueba de hasta dónde se llega aprendiendo rápido y sin miedo a mezclar cosas que en un CV normal no van juntas.
+
+Aquí está, por si quieres perder diez minutos jugando con él:
+👉 fleremiasflemin20-maker.github.io/Portafolio-fleremiasflemin
+
+<span class="hash">#DesarrolloWeb #ReactJS #ThreeJS #PortafolioDesarrollador #IngenieroJunior #HospitalityTech</span></div>
+      <div class="post-body" id="post-li-en" data-en>A few years ago I was making beds at a hotel in Santa Monica. Today I write the software that runs a hotel like that one.
+
+In between: housekeeping, a promotion to manager, a lot of nights noticing exactly where hotel operations break down... and the idea that most of it could be fixed with better software. That's how Fleremahias PMS was born.
+
+When it came time to build my portfolio, I didn't want another PDF or a boring project list. I wanted it to feel like building this stuff actually feels: a little playful, a little obsessive about detail.
+
+So I ended up with a site where you pick your "character" like in a video game, move things with your hand in front of the camera, there's a whole playable world made only out of text, and I even scanned a Gogeta figure with my phone and turned it into a real 3D model.
+
+Nothing here is inflated. If a claim doesn't have real data behind it, the site says so instead of dressing it up.
+
+I'm a Junior engineer. I say that without shame — this project is proof of how far you get by learning fast and not being afraid to mix things that "don't belong together" on a normal résumé.
+
+Here it is, in case you want to lose ten minutes playing with it:
+👉 fleremiasflemin20-maker.github.io/Portafolio-fleremiasflemin
+
+<span class="hash">#WebDevelopment #ReactJS #ThreeJS #DeveloperPortfolio #JuniorDeveloper #HospitalityTech</span></div>
+    </article>
+
+    <article class="post">
+      <header>
+        <span class="tag ig">Instagram</span>
+        <button class="copiar" data-copy="post-ig">Copiar</button>
+      </header>
+      <div class="post-body" id="post-ig" data-es>Mi portafolio no es una página, es un videojuego. 🎮✨
+
+Selector de personaje como en un juego 🕹️ · control con las manos, en serio, con la cámara 🖐️ · una figura de Gogeta SSJ4 que escaneé con el celular y convertí en modelo 3D 🐉🔥 · un mundo jugable dibujado solo con texto, cero imágenes, cero WebGL 👾 · y mi historia real, de houseman a ingeniero, contada en una sola toma de cámara sin cortes 🎬
+
+Cero datos inventados. Si algo no lo puedo probar, el sitio mismo lo dice.
+
+Soy Jr. Y esto es lo que hace un Jr cuando de verdad le gusta lo que hace 💻🚀
+
+Link en la bio 🔗
+
+<span class="hash">#DevPortfolio #ThreeJS #WebDev #ReactJS #DragonBall #GogetaSSJ4 #IndieDev #JuniorDeveloper #CreativeCoding #ProgramadorEcuatoriano #Scrollytelling #WebGL #TechArt #BuildInPublic</span></div>
+      <div class="post-body" id="post-ig-en" data-en>My portfolio isn't a page, it's a video game. 🎮✨
+
+Character select like an actual game 🕹️ · hand-gesture controls, for real, using the camera 🖐️ · a Gogeta SSJ4 figure I scanned with my phone and turned it into a 3D model 🐉🔥 · a whole playable world drawn only in text, zero images, zero WebGL 👾 · and my real story, from hotel houseman to engineer, told in one continuous camera shot 🎬
+
+Zero made-up numbers. If I can't back it up, the site says so.
+
+I'm a Jr. And this is what a Jr does when they actually love the craft 💻🚀
+
+Link in bio 🔗
+
+<span class="hash">#DevPortfolio #ThreeJS #WebDev #ReactJS #DragonBall #GogetaSSJ4 #IndieDev #JuniorDeveloper #CreativeCoding #Scrollytelling #WebGL #TechArt #BuildInPublic</span></div>
+    </article>
+  </section>
+
+  <!-- ================= DESGLOSE TÉCNICO ================= -->
+  <section>
+    <p class="seccion-titulo"><span data-es>Qué lleva el sitio, por dentro</span><span data-en>What's inside, under the hood</span></p>
+
+    <div class="bloque">
+      <h3><span data-es>Concepto</span><span data-en>Concept</span></h3>
+      <p data-es>No es una lista de proyectos: es un selector de personaje. Tres facetas —3D & IA, Software, Hotel Tech— giran en una rueda fija en pantalla, cada una con su propio degradado, su propio modelo 3D y sus misiones reales sacadas del CV, sin inventar un solo puesto.</p>
+      <p data-en>Not a project list — a character select screen. Three facets — 3D & AI, Software, Hotel Tech — spin on a fixed wheel, each with its own gradient, its own 3D model, and real missions pulled straight from the résumé, no invented job titles.</p>
+    </div>
+
+    <div class="bloque">
+      <h3><span data-es>Motor visual</span><span data-en>Rendering engine</span></h3>
+      <p data-es>Three.js + React Three Fiber + drei para toda la escena. El sitio detecta si el dispositivo es móvil, la ventana es angosta o el hardware es débil, y sirve texturas y sombras más livianas sin que nadie lo pida.</p>
+      <p data-en>Three.js + React Three Fiber + drei for the whole scene. The site detects a mobile device, a narrow window, or weak hardware, and quietly serves lighter textures and shadows — no setting to flip.</p>
+    </div>
+
+    <div class="bloque">
+      <h3><span data-es>Narrativa y scroll</span><span data-en>Story & scroll</span></h3>
+      <p data-es>GSAP + ScrollTrigger maneja una línea de tiempo maestra; Lenis suaviza el scroll compartiendo el mismo "tick". La cámara hace un solo recorrido continuo, sin cortes entre secciones.</p>
+      <p data-en>GSAP + ScrollTrigger drives one master timeline; Lenis smooths the scroll, sharing the same tick. The camera runs a single continuous take, no cuts between sections.</p>
+    </div>
+
+    <div class="bloque">
+      <h3><span data-es>Control por gestos</span><span data-en>Hand-gesture control</span></h3>
+      <p data-es>MediaPipe Tasks Vision, corriendo en el navegador, sin backend: reconoce gestos en vivo desde la cámara y gira la rueda de personaje.</p>
+      <p data-en>MediaPipe Tasks Vision, running entirely in the browser, no backend: reads live gestures from the camera and spins the character wheel.</p>
+    </div>
+
+    <div class="bloque">
+      <h3>Gogeta SSJ4</h3>
+      <p data-es>Escaneo fotogramétrico hecho con el celular, decimado y montado con material PBR real —difuso, normales, rugosidad y metalicidad por separado, no una textura de relleno—, comprimido con Draco.</p>
+      <p data-en>A phone-made photogrammetry scan, decimated and rigged with a real PBR material — separate diffuse, normal, roughness and metalness maps, not a placeholder texture — compressed with Draco.</p>
+      <div class="stats">
+        <span class="stat">500K → 150K TRIS</span>
+        <span class="stat">52 MB → 692 KB</span>
+        <span class="stat" data-es>4 ETAPAS EN VIVO</span>
+        <span class="stat" data-en>4 LIVE BUILD STAGES</span>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <h3><span data-es>Cajón de figuras 3D</span><span data-en>3D figure drawer</span></h3>
+      <p data-es>Diez piezas generadas con Meshy AI, optimizadas con glTF-Transform (meshopt + WebP a 1024px). Carrusel tipo selector de personaje, con precarga de las dos figuras vecinas.</p>
+      <p data-en>Ten pieces generated with Meshy AI, optimized with glTF-Transform (meshopt + WebP at 1024px). A character-select-style carousel that preloads the two neighboring figures.</p>
+    </div>
+
+    <div class="bloque">
+      <h3>Islas de Aether</h3>
+      <p data-es>Motor propio en canvas 2D, sin WebGL ni una sola textura: todo dibujado con glifos ASCII, z-buffer propio, corriendo en un Web Worker aparte del hilo principal.</p>
+      <p data-en>A custom canvas-2D engine, no WebGL, no textures at all: everything drawn in ASCII glyphs, its own z-buffer, rendering inside a Web Worker off the main thread.</p>
+      <div class="stats">
+        <span class="stat" data-es>CERO DEPENDENCIAS</span>
+        <span class="stat" data-en>ZERO DEPENDENCIES</span>
+        <span class="stat">84 KB</span>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <h3><span data-es>Honestidad radical</span><span data-en>Radical honesty</span></h3>
+      <p data-es>Cada captura es real y cada enlace fue comprobado uno por uno. Las barras de habilidad muestran solo porcentajes reales del CV — si una faceta no tiene datos, el sitio lo admite en vez de rellenar.</p>
+      <p data-en>Every screenshot is real, every link was checked one by one. Skill bars show only real percentages from the résumé — if a facet has no data yet, the site says so instead of padding the number.</p>
+    </div>
+
+    <div class="bloque">
+      <h3><span data-es>Infraestructura</span><span data-en>Infrastructure</span></h3>
+      <p data-es>Cero backend, cero base de datos. CI/CD con GitHub Actions: cada push a main compila y despliega solo a GitHub Pages. El contenido —personajes, capítulos, proyectos— vive en archivos de datos tipados, separado de la interfaz.</p>
+      <p data-en>Zero backend, zero database. CI/CD with GitHub Actions: every push to main builds and deploys straight to GitHub Pages. Content — characters, chapters, projects — lives in typed data files, separate from the UI.</p>
+    </div>
+
+    <div class="bloque">
+      <h3><span data-es>Stack técnico</span><span data-en>Tech stack</span></h3>
+      <div class="pills">
+        <span class="pill">React 19</span>
+        <span class="pill">TypeScript</span>
+        <span class="pill">Vite</span>
+        <span class="pill">Tailwind CSS</span>
+        <span class="pill">Three.js</span>
+        <span class="pill">react-three-fiber</span>
+        <span class="pill">drei</span>
+        <span class="pill">GSAP · ScrollTrigger</span>
+        <span class="pill">Lenis</span>
+        <span class="pill">MediaPipe Tasks Vision</span>
+        <span class="pill">Draco / meshopt</span>
+        <span class="pill">Zod</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="disclaimer" data-es>Gogeta SSJ4 es un personaje de Dragon Ball, propiedad de Akira Toriyama, Shueisha y Toei Animation — la pieza es un estudio sin fines comerciales. El resto del portafolio, el código y la ingeniería de todo lo de arriba, es del propio Lenin: ingeniero Junior, con la experiencia y el criterio para probarlo.</p>
+  <p class="disclaimer" data-en>Gogeta SSJ4 is a Dragon Ball character, owned by Akira Toriyama, Shueisha and Toei Animation — a non-commercial study piece. Everything else — the code and the engineering behind all of it above — is Lenin's own: a Junior engineer, with the range to prove it.</p>
+
+  <footer>
+    <span>LENIN BONILLA · 2026</span>
+    <a href="https://fleremiasflemin20-maker.github.io/Portafolio-fleremiasflemin/" target="_blank" rel="noreferrer">fleremiasflemin20-maker.github.io/Portafolio-fleremiasflemin ↗</a>
+  </footer>
+
+</div>
+
+<script>
+  document.querySelectorAll('.copiar').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-copy');
+      var lang = document.getElementById('lang').checked ? '-en' : '';
+      var el = document.getElementById(id + lang) || document.getElementById(id);
+      var texto = el ? el.innerText : '';
+      var original = btn.textContent;
+      function marcar(ok){
+        btn.textContent = ok ? '✓' : original;
+        btn.classList.toggle('ok', ok);
+        if (ok) setTimeout(function(){ btn.textContent = original; btn.classList.remove('ok'); }, 1600);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(function(){ marcar(true); }).catch(function(){ marcar(false); });
+      } else {
+        marcar(false);
+      }
+    });
+  });
+</script>
+</body>
+</html>

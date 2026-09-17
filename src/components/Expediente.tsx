@@ -1,5 +1,7 @@
 import { PROYECTOS } from '../lib/proyectos'
 import type { Faceta } from '../lib/facetas'
+import { Habilidades } from './Habilidades'
+import { CarruselMeshy } from './CarruselMeshy'
 
 /**
  * El expediente: los proyectos de la faceta elegida.
@@ -31,6 +33,21 @@ export function Expediente({ faceta }: { faceta: Faceta }) {
           {lista.length} {lista.length === 1 ? 'pieza' : 'piezas'}
         </p>
       </header>
+
+      {/* Las barras van antes de la rejilla: primero quién es este personaje,
+          después lo que ha hecho. */}
+      <div className="mt-12">
+        <Habilidades faceta={faceta} />
+      </div>
+
+      {/* Solo en 3D & IA: el cajón de figuras generadas con Meshy no encaja
+          como barra de habilidad ni como tarjeta de proyecto con enlace — es
+          su propia pieza, jugada como un selector de personaje. */}
+      {faceta.id === '3d' && (
+        <div className="mt-6">
+          <CarruselMeshy />
+        </div>
+      )}
 
       {/*
         `key` en la faceta: al cambiarla, React remonta la rejilla entera y la

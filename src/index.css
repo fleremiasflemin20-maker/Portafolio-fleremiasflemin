@@ -53,3 +53,338 @@
     .rueda-anillo { transition: none !important }
   }
 }
+
+@layer components {
+  /*
+   * El pulso ambiental de la rueda.
+   *
+   * Permanente y no solo al pasar el ratón: el problema es que nadie llega
+   * a pasar el ratón por ahí si nada le dice antes que merece la pena. Un
+   * resplandor que respira, en el color de la faceta activa, es la versión
+   * silenciosa de "esto se toca" — no interrumpe como un texto, pero
+   * tampoco deja la rueda leyéndose como un adorno fijo.
+   */
+  .rueda-pulso {
+    animation: pulsoRueda 2.6s ease-in-out infinite;
+  }
+
+  @keyframes pulsoRueda {
+    0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+    50% { filter: drop-shadow(0 0 9px var(--tinta, #3BE0D0)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rueda-pulso { animation: none }
+  }
+}
+
+@layer components {
+  /* La pista de texto sobre la rueda: un flotado suave para que no se lea
+     como una etiqueta pegada, sino como algo que está señalando hacia
+     abajo, hacia el sector que hay que tocar. */
+  .pista-rueda {
+    animation: flotaPista 1.6s ease-in-out infinite;
+  }
+
+  @keyframes flotaPista {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pista-rueda { animation: none }
+  }
+}
+
+@layer components {
+  .rotulo {
+    --borde: 0.035em;
+    --tinta-borde: #0A0A12;
+    letter-spacing: -0.02em;
+    text-shadow:
+      calc(var(--borde) * -1) calc(var(--borde) * -1) 0 var(--tinta-borde),
+      var(--borde) calc(var(--borde) * -1) 0 var(--tinta-borde),
+      calc(var(--borde) * -1) var(--borde) 0 var(--tinta-borde),
+      var(--borde) var(--borde) 0 var(--tinta-borde),
+      0 calc(var(--borde) * -1.3) 0 var(--tinta-borde),
+      0 calc(var(--borde) * 1.3) 0 var(--tinta-borde),
+      calc(var(--borde) * -1.3) 0 0 var(--tinta-borde),
+      calc(var(--borde) * 1.3) 0 0 var(--tinta-borde),
+      0.07em 0.08em 0 var(--tinta-borde);
+  }
+}
+
+@layer components {
+  /*
+   * Velo de legibilidad.
+   *
+   * En horizontal el texto vive en un lado y la figura en el otro, así que el
+   * velo va lateral. En vertical no hay dos lados: el texto se apila abajo y la
+   * figura ocupa toda la pantalla detrás — medido, en el plano corto la figura
+   * va de -159 a 449 px sobre una pantalla de 390. Un velo lateral ahí no tapa
+   * nada y el texto acaba sobre la camiseta blanca.
+   */
+  .velo {
+    background: linear-gradient(to top, #0A0A12EE 0%, #0A0A12B3 38%, #0A0A1255 62%, transparent 88%);
+  }
+
+  @media (min-width: 768px) {
+    .velo-izq {
+      background: linear-gradient(to right, #0A0A12E6 0%, #0A0A1299 42%, transparent 72%);
+    }
+    .velo-der {
+      background: linear-gradient(to left, #0A0A12E6 0%, #0A0A1299 42%, transparent 72%);
+    }
+  }
+}
+
+@layer base {
+  /* Mientras dura la cinemática no se puede hacer scroll: ver Cinematica.tsx. */
+  html.cargando,
+  html.cargando body {
+    overflow: hidden;
+  }
+}
+
+@layer base {
+  /*
+   * Blanco y negro por gesto: el marco de foto con las dos manos, ver
+   * `esMarco` en manos.ts y `alternarBN` en ControlManos.tsx.
+   *
+   * `filter` en `body` y no en `html`: en `html` el filtro no llega a
+   * pintarse —comprobado, el elemento raíz se queda en `grayscale(0)` pase lo
+   * que pase—, y `body` cubre exactamente lo mismo, porque todo lo visible de
+   * la página cuelga de ahí. Tampoco en `main` o en cada sección: tiene que
+   * caer sobre todo lo que se pinta, faceta 3D y HUD incluidos, para que el
+   * gesto lea como un modo del sitio entero y no como un efecto de una sola
+   * sección. La transición vive aquí y no en `.bn-activo` porque tiene que
+   * animar tanto al entrar como al salir del blanco y negro.
+   */
+  body {
+    transition: filter 700ms ease;
+  }
+  body.bn-activo {
+    filter: grayscale(1);
+  }
+}
+
+@layer components {
+  /*
+   * El cursor por gestos. Ver ControlManos.tsx.
+   *
+   * La posición y la escala del clic se escriben por `style.transform` desde
+   * el bucle de detección — a 24 fps, tocar clases de React repintaría el
+   * árbol entero. Lo único que queda para CSS es lo que sí puede vivir en una
+   * clase sin pisarse con eso: el relleno del círculo y el destello del clic.
+   */
+  .cursor-mano-cerrado span {
+    background-color: rgb(59 224 208 / 0.4);
+  }
+
+  .cursor-mano-clic {
+    animation: clicMano 220ms ease-out;
+  }
+
+  @keyframes clicMano {
+    0% { box-shadow: 0 0 0 0 rgb(59 224 208 / 0.6); }
+    100% { box-shadow: 0 0 0 14px rgb(59 224 208 / 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cursor-mano-clic { animation: none }
+  }
+}
+
+@layer components {
+  .cursor-intro {
+    animation: parpadeo 1s steps(2) infinite;
+  }
+
+  @keyframes parpadeo {
+    0%, 49% { opacity: 1 }
+    50%, 100% { opacity: 0 }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cursor-intro { animation: none }
+  }
+}
+
+@layer components {
+  /*
+   * Onomatopeya de cómic: relleno claro y contorno negro grueso.
+   *
+   * El contorno se hace con ocho sombras en anillo y no con
+   * `-webkit-text-stroke`, porque el trazo se pinta centrado sobre el relleno y
+   * adelgaza la letra; el anillo crece hacia fuera y engorda la silueta, que es
+   * lo que hace una rotulación de viñeta.
+   */
+  .golpe {
+    font-family: 'Archivo Black', Impact, sans-serif;
+    color: #FFE45C;
+    letter-spacing: 0.01em;
+    text-shadow:
+      -0.05em -0.05em 0 #0A0A12,
+      0.05em -0.05em 0 #0A0A12,
+      -0.05em 0.05em 0 #0A0A12,
+      0.05em 0.05em 0 #0A0A12,
+      0 -0.065em 0 #0A0A12,
+      0 0.065em 0 #0A0A12,
+      -0.065em 0 0 #0A0A12,
+      0.065em 0 0 #0A0A12,
+      0.1em 0.11em 0 rgba(10, 10, 18, 0.85);
+  }
+}
+
+@layer components {
+  /* El vídeo de la intro no aparece de golpe: entra deslizándose desde el
+     borde, o el primer fotograma se planta en pantalla como un cartel. */
+  @keyframes entraVideo {
+    from { opacity: 0; transform: translateX(6%) scale(1.04) }
+    to   { opacity: 0.85; transform: none }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    video { animation: none !important; opacity: 0.85 !important }
+  }
+}
+
+@layer components {
+  /*
+   * El pulso del botón "Presiona para continuar".
+   *
+   * Sin él, el botón es un rectángulo más en una pantalla con vídeo y letras
+   * animándose: se pierde. El pulso —escala y un resplandor que respira en el
+   * color de la faceta— es lo que hace que el ojo lo encuentre sin tener que
+   * leer la pantalla entera primero.
+   */
+  .boton-continuar {
+    animation: pulsoContinuar 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulsoContinuar {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--tinta, #FF9A4D) 45%, transparent);
+    }
+    50% {
+      transform: scale(1.045);
+      box-shadow: 0 0 0 10px color-mix(in srgb, var(--tinta, #FF9A4D) 0%, transparent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .boton-continuar { animation: none }
+  }
+}
+
+@layer components {
+  /*
+   * El pulso del botón "Manejar con las manos". Permanente a propósito: no
+   * todo el mundo llega a esta sección en los primeros segundos de la
+   * visita, así que el aviso no se apaga solo.
+   *
+   * Mismo problema que el botón "Presiona para continuar", pero con un vecino
+   * más exigente: aquí el pulso corre MIENTRAS se hace scroll, no en una
+   * pantalla de carga quieta, y encima sin parar durante toda la visita.
+   * `box-shadow` no lo pinta el compositor, lo repinta el hilo principal en
+   * cada fotograma — el mismo hilo que reparte Lenis, ScrollTrigger y el
+   * lienzo 3D, y corriendo indefinidamente ahí sí se nota. `filter:
+   * drop-shadow` da el mismo resplandor que respira y sí corre por el
+   * compositor, igual que ya hace `.rueda-pulso` más abajo — es lo que hace
+   * viable dejarlo permanente sin que compita con el scroll.
+   */
+  .boton-manos-pulso {
+    animation: pulsoManos 1.7s ease-in-out infinite;
+  }
+
+  @keyframes pulsoManos {
+    0%, 100% {
+      transform: scale(1);
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    50% {
+      transform: scale(1.07);
+      filter: drop-shadow(0 0 8px rgba(59, 224, 208, 0.55));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .boton-manos-pulso { animation: none }
+  }
+}
+
+@layer components {
+  /*
+   * La flecha de cómic que señala el botón de gestos.
+   *
+   * Un tembleque pequeño y constante, como una flecha dibujada a mano que no
+   * termina de estarse quieta — el mismo lenguaje que las onomatopeyas de
+   * `.golpe`, aplicado a una flecha en vez de a una palabra.
+   */
+  .flecha-comic {
+    animation: senalaManos 1.3s ease-in-out infinite;
+    transform-origin: 80% 15%;
+  }
+
+  @keyframes senalaManos {
+    0%, 100% { transform: rotate(-3deg) translateY(0); }
+    50% { transform: rotate(4deg) translateY(3px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flecha-comic { animation: none }
+  }
+}
+
+@layer components {
+  /*
+   * Entrada del nombre de la cinemática, letra a letra.
+   *
+   * Sube desde abajo con un poco de escala y de inclinación. El `both` mantiene
+   * el estado inicial antes de que arranque su retardo: sin él, todas las
+   * letras se ven un instante antes de empezar a animarse, y el escalonado se
+   * pierde.
+   */
+  .letra-intro {
+    animation: entraLetra 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes entraLetra {
+    from {
+      opacity: 0;
+      transform: translateY(0.5em) scale(0.86) rotate(-4deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .letra-intro { animation: none }
+  }
+}
+
+@layer components {
+  /*
+   * El barrido de `FiguraFlotante`: una franja que cruza la pantalla de
+   * arriba abajo en bucle, como el escaneo de una interfaz de ciencia
+   * ficción — lo que deja claro que la cámara está "leyendo" algo de verdad,
+   * en vez de ser solo un vídeo de fondo.
+   */
+  .barrido-jarvis {
+    animation: barridoJarvis 3.4s linear infinite;
+  }
+
+  @keyframes barridoJarvis {
+    0% { transform: translateY(-100%); opacity: 0; }
+    12% { opacity: 1; }
+    88% { opacity: 1; }
+    100% { transform: translateY(100vh); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .barrido-jarvis { animation: none; opacity: 0; }
+  }
+}
