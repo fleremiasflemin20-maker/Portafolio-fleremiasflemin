@@ -10,7 +10,7 @@ import type { Personaje3D } from '../lib/personajes3d'
  */
 const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')
 export const DRACO = `${BASE}/draco/`
-export const rutaModelo = (p: Personaje3D) => `${BASE}/models/${p.carpeta ?? 'meshy'}/${p.archivo}.glb`
+export const rutaModelo = (p: Personaje3D) => `${BASE}/${p.ruta ?? `models/${p.carpeta ?? 'meshy'}/${p.archivo}.glb`}`
 export const rutaTextura = (p: Personaje3D, archivo: string) => `${BASE}/textures/${p.carpeta ?? 'meshy'}/${archivo}`
 
 /** Las piezas de Meshy traen el material horneado en el propio `.glb`. */

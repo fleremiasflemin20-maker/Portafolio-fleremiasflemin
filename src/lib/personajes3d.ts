@@ -18,6 +18,7 @@ export type Personaje3D = {
   id: string
   nombre: string
   archivo: string
+  ruta?: string
   /** Carpeta dentro de `public/models/`. Por defecto 'meshy'. */
   carpeta?: string
   /** Lleva `KHR_draco_mesh_compression` — las piezas de Meshy no la usan. */
@@ -63,4 +64,5 @@ export const PERSONAJES_3D: Personaje3D[] = [
   { id: 'figura-05', nombre: 'Figura 3D · 05', archivo: 'figura-05' },
   { id: 'figura-06', nombre: 'Figura 3D · 06', archivo: 'figura-06' },
   { id: 'figura-07', nombre: 'Figura 3D · 07', archivo: 'figura-07' },
+  { id: 'meliodas', nombre: 'Meliodas', archivo: 'meliodas3d', ruta: 'meliodas3d.glb', origen: 'Modelo 3D' },
 ]
